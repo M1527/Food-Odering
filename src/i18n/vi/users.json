@@ -1,0 +1,6 @@
+{
+  "errors": {
+    "notFound": "Không tìm thấy người dùng",
+    "blocked": "Tài khoản đã bị khóa"
+  }
+}

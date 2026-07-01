@@ -1,0 +1,6 @@
+{
+  "errors": {
+    "notFound": "User not found",
+    "blocked": "User is blocked"
+  }
+}
