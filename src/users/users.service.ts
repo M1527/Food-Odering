@@ -17,7 +17,9 @@ export class UsersService {
 
   async findById(id: number): Promise<User> {
     const user = await this.usersRepository.findOne({
-      where: { id },
+      where: {
+        id,
+      },
     });
 
     if (!user) {
@@ -35,7 +37,9 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
-      where: { email },
+      where: {
+        email,
+      },
     });
   }
 
@@ -43,15 +47,6 @@ export class UsersService {
     const createdUser = this.usersRepository.create(user);
 
     return this.usersRepository.save(createdUser);
-  }
-
-  async updateRefreshTokenHash(
-    userId: number,
-    refreshTokenHash: string | null,
-  ): Promise<void> {
-    await this.usersRepository.update(userId, {
-      refreshTokenHash,
-    });
   }
 
   private translate(key: string): string {

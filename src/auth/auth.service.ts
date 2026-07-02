@@ -6,24 +6,32 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 import type { SignOptions } from 'jsonwebtoken';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 
+import { ProfilesService } from '../profiles/profiles.service';
 import { RedisService } from '../redis/redis.service';
+import { UserSessionsService } from '../user-sessions/user-sessions.service';
 import { LoginDto } from '../users/dto/login.dto';
 import { LogoutDto } from '../users/dto/logout.dto';
 import { RefreshTokenDto } from '../users/dto/refresh-token.dto';
 import { RegisterDto } from '../users/dto/register.dto';
 import { UserResponseDto } from '../users/dto/user-response.dto';
+import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 
 type RefreshTokenPayload = {
   sub: number;
   email: string;
+  sid: number;
+  jti: string;
+  exp: number;
 };
 
 type DecodedToken = {
   sub?: number;
+  sid?: number;
   exp?: number;
 };
 
@@ -31,6 +39,8 @@ type DecodedToken = {
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
+    private readonly profilesService: ProfilesService,
+    private readonly userSessionsService: UserSessionsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly i18n: I18nService,
@@ -55,14 +65,10 @@ export class AuthService {
       phone: registerDto.phone,
     });
 
-    const accessToken = await this.generateAccessToken(user.id, user.email);
-    const refreshToken = await this.generateRefreshToken(user.id, user.email);
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    await this.profilesService.createDefaultProfile(user);
 
-    await this.usersService.updateRefreshTokenHash(
-      user.id,
-      refreshTokenHash,
-    );
+    const accessToken = await this.generateAccessToken(user.id, user.email);
+    const refreshToken = await this.createRefreshTokenSession(user);
 
     return {
       message: this.translate('auth.messages.registered'),
@@ -93,13 +99,7 @@ export class AuthService {
     }
 
     const accessToken = await this.generateAccessToken(user.id, user.email);
-    const refreshToken = await this.generateRefreshToken(user.id, user.email);
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-
-    await this.usersService.updateRefreshTokenHash(
-      user.id,
-      refreshTokenHash,
-    );
+    const refreshToken = await this.createRefreshTokenSession(user);
 
     return {
       message: this.translate('auth.messages.loggedIn'),
@@ -114,11 +114,16 @@ export class AuthService {
       refreshTokenDto.refreshToken,
     );
 
-    const isBlacklisted = await this.redisService.exists(
-      `blacklist:${refreshTokenDto.refreshToken}`,
-    );
+    this.validateRefreshTokenPayload(payload);
 
-    if (isBlacklisted) {
+    const session =
+      await this.userSessionsService.findValidSessionByIdAndRefreshToken(
+        payload.sid,
+        payload.sub,
+        refreshTokenDto.refreshToken,
+      );
+
+    if (!session) {
       throw new UnauthorizedException(
         this.translate('auth.errors.unauthorized'),
       );
@@ -126,31 +131,13 @@ export class AuthService {
 
     const user = await this.usersService.findById(payload.sub);
 
-    if (!user.refreshTokenHash) {
-      throw new UnauthorizedException(
-        this.translate('auth.errors.unauthorized'),
-      );
-    }
-
-    const isRefreshTokenValid = await bcrypt.compare(
-      refreshTokenDto.refreshToken,
-      user.refreshTokenHash,
+    await this.userSessionsService.deleteSessionById(
+      session.id,
+      user.id,
     );
-
-    if (!isRefreshTokenValid) {
-      throw new UnauthorizedException(
-        this.translate('auth.errors.unauthorized'),
-      );
-    }
 
     const accessToken = await this.generateAccessToken(user.id, user.email);
-    const refreshToken = await this.generateRefreshToken(user.id, user.email);
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-
-    await this.usersService.updateRefreshTokenHash(
-      user.id,
-      refreshTokenHash,
-    );
+    const refreshToken = await this.createRefreshTokenSession(user);
 
     return {
       message: this.translate('auth.messages.tokenRefreshed'),
@@ -169,26 +156,44 @@ export class AuthService {
     ) as DecodedToken | null;
 
     if (accessTokenPayload?.exp) {
-      await this.blacklistToken(accessToken, accessTokenPayload.exp);
+      await this.blacklistAccessToken(accessToken, accessTokenPayload.exp);
     }
 
-    if (refreshTokenPayload?.exp) {
-      await this.blacklistToken(
-        logoutDto.refreshToken,
-        refreshTokenPayload.exp,
-      );
-    }
-
-    if (accessTokenPayload?.sub) {
-      await this.usersService.updateRefreshTokenHash(
-        accessTokenPayload.sub,
-        null,
+    if (
+      typeof refreshTokenPayload?.sid === 'number' &&
+      typeof refreshTokenPayload?.sub === 'number'
+    ) {
+      await this.userSessionsService.deleteSessionById(
+        refreshTokenPayload.sid,
+        refreshTokenPayload.sub,
       );
     }
 
     return {
       message: this.translate('auth.messages.loggedOut'),
     };
+  }
+
+  private async createRefreshTokenSession(user: User): Promise<string> {
+    const session = await this.userSessionsService.createPendingSession(user);
+
+    const refreshToken = await this.generateRefreshToken(
+      user.id,
+      user.email,
+      session.id,
+    );
+
+    const refreshTokenPayload = this.jwtService.decode(
+      refreshToken,
+    ) as DecodedToken | null;
+
+    await this.userSessionsService.updateRefreshToken(
+      session.id,
+      refreshToken,
+      this.createExpiredAt(refreshTokenPayload?.exp),
+    );
+
+    return refreshToken;
   }
 
   private async generateAccessToken(
@@ -214,6 +219,7 @@ export class AuthService {
   private async generateRefreshToken(
     userId: number,
     email: string,
+    sessionId: number,
   ): Promise<string> {
     const expiresIn = this.configService.getOrThrow<
       SignOptions['expiresIn']
@@ -223,9 +229,13 @@ export class AuthService {
       {
         sub: userId,
         email,
+        sid: sessionId,
+        jti: randomUUID(),
       },
       {
-        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        secret: this.configService.getOrThrow<string>(
+          'JWT_REFRESH_SECRET',
+        ),
         expiresIn,
       },
     );
@@ -250,7 +260,23 @@ export class AuthService {
     }
   }
 
-  private async blacklistToken(token: string, exp: number): Promise<void> {
+  private validateRefreshTokenPayload(payload: RefreshTokenPayload): void {
+    if (
+      typeof payload.sub !== 'number' ||
+      typeof payload.sid !== 'number' ||
+      typeof payload.email !== 'string' ||
+      typeof payload.jti !== 'string'
+    ) {
+      throw new UnauthorizedException(
+        this.translate('auth.errors.unauthorized'),
+      );
+    }
+  }
+
+  private async blacklistAccessToken(
+    accessToken: string,
+    exp: number,
+  ): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
     const ttl = exp - now;
 
@@ -258,7 +284,15 @@ export class AuthService {
       return;
     }
 
-    await this.redisService.set(`blacklist:${token}`, '1', ttl);
+    await this.redisService.set(`blacklist:${accessToken}`, '1', ttl);
+  }
+
+  private createExpiredAt(exp?: number): Date {
+    if (!exp) {
+      return new Date();
+    }
+
+    return new Date(exp * 1000);
   }
 
   private translate(key: string): string {
