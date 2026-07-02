@@ -1,14 +1,31 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { I18nContext, I18nService } from 'nestjs-i18n';
 import { JwtService } from '@nestjs/jwt';
-import type { SignOptions } from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
+import type { SignOptions } from 'jsonwebtoken';
+import { I18nContext, I18nService } from 'nestjs-i18n';
 
-import { UsersService } from '../users/users.service';
-import { UserResponseDto } from '../users/dto/user-response.dto';
-import { RegisterDto } from '../users/dto/register.dto';
+import { RedisService } from '../redis/redis.service';
 import { LoginDto } from '../users/dto/login.dto';
+import { LogoutDto } from '../users/dto/logout.dto';
+import { RefreshTokenDto } from '../users/dto/refresh-token.dto';
+import { RegisterDto } from '../users/dto/register.dto';
+import { UserResponseDto } from '../users/dto/user-response.dto';
+import { UsersService } from '../users/users.service';
+
+type RefreshTokenPayload = {
+  sub: number;
+  email: string;
+};
+
+type DecodedToken = {
+  sub?: number;
+  exp?: number;
+};
 
 @Injectable()
 export class AuthService {
@@ -17,10 +34,13 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly i18n: I18nService,
+    private readonly redisService: RedisService,
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const existingUser = await this.usersService.findByEmail(registerDto.email);
+    const existingUser = await this.usersService.findByEmail(
+      registerDto.email,
+    );
 
     if (existingUser) {
       throw new ConflictException(this.translate('auth.errors.emailExists'));
@@ -35,11 +55,20 @@ export class AuthService {
       phone: registerDto.phone,
     });
 
+    const accessToken = await this.generateAccessToken(user.id, user.email);
+    const refreshToken = await this.generateRefreshToken(user.id, user.email);
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
+    await this.usersService.updateRefreshTokenHash(
+      user.id,
+      refreshTokenHash,
+    );
+
     return {
       message: this.translate('auth.messages.registered'),
       user: UserResponseDto.createFromUser(user),
-      accessToken: await this.generateAccessToken(user.id, user.email),
-      refreshToken: await this.generateRefreshToken(user.id, user.email),
+      accessToken,
+      refreshToken,
     };
   }
 
@@ -63,33 +92,125 @@ export class AuthService {
       );
     }
 
+    const accessToken = await this.generateAccessToken(user.id, user.email);
+    const refreshToken = await this.generateRefreshToken(user.id, user.email);
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
+    await this.usersService.updateRefreshTokenHash(
+      user.id,
+      refreshTokenHash,
+    );
+
     return {
       message: this.translate('auth.messages.loggedIn'),
       user: UserResponseDto.createFromUser(user),
-      accessToken: await this.generateAccessToken(user.id, user.email),
-      refreshToken: await this.generateRefreshToken(user.id, user.email),
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async refreshToken(refreshTokenDto: RefreshTokenDto) {
+    const payload = await this.verifyRefreshToken(
+      refreshTokenDto.refreshToken,
+    );
+
+    const isBlacklisted = await this.redisService.exists(
+      `blacklist:${refreshTokenDto.refreshToken}`,
+    );
+
+    if (isBlacklisted) {
+      throw new UnauthorizedException(
+        this.translate('auth.errors.unauthorized'),
+      );
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+
+    if (!user.refreshTokenHash) {
+      throw new UnauthorizedException(
+        this.translate('auth.errors.unauthorized'),
+      );
+    }
+
+    const isRefreshTokenValid = await bcrypt.compare(
+      refreshTokenDto.refreshToken,
+      user.refreshTokenHash,
+    );
+
+    if (!isRefreshTokenValid) {
+      throw new UnauthorizedException(
+        this.translate('auth.errors.unauthorized'),
+      );
+    }
+
+    const accessToken = await this.generateAccessToken(user.id, user.email);
+    const refreshToken = await this.generateRefreshToken(user.id, user.email);
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
+    await this.usersService.updateRefreshTokenHash(
+      user.id,
+      refreshTokenHash,
+    );
+
+    return {
+      message: this.translate('auth.messages.tokenRefreshed'),
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async logout(accessToken: string, logoutDto: LogoutDto) {
+    const accessTokenPayload = this.jwtService.decode(
+      accessToken,
+    ) as DecodedToken | null;
+
+    const refreshTokenPayload = this.jwtService.decode(
+      logoutDto.refreshToken,
+    ) as DecodedToken | null;
+
+    if (accessTokenPayload?.exp) {
+      await this.blacklistToken(accessToken, accessTokenPayload.exp);
+    }
+
+    if (refreshTokenPayload?.exp) {
+      await this.blacklistToken(
+        logoutDto.refreshToken,
+        refreshTokenPayload.exp,
+      );
+    }
+
+    if (accessTokenPayload?.sub) {
+      await this.usersService.updateRefreshTokenHash(
+        accessTokenPayload.sub,
+        null,
+      );
+    }
+
+    return {
+      message: this.translate('auth.messages.loggedOut'),
     };
   }
 
   private async generateAccessToken(
     userId: number,
     email: string,
-    ): Promise<string> {
+  ): Promise<string> {
     const expiresIn = this.configService.getOrThrow<
-        SignOptions['expiresIn']
+      SignOptions['expiresIn']
     >('JWT_ACCESS_EXPIRES_IN');
 
     return this.jwtService.signAsync(
-        {
+      {
         sub: userId,
         email,
-        },
-        {
+      },
+      {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
         expiresIn,
-        },
+      },
     );
-    }
+  }
+
   private async generateRefreshToken(
     userId: number,
     email: string,
@@ -108,6 +229,36 @@ export class AuthService {
         expiresIn,
       },
     );
+  }
+
+  private async verifyRefreshToken(
+    refreshToken: string,
+  ): Promise<RefreshTokenPayload> {
+    try {
+      return await this.jwtService.verifyAsync<RefreshTokenPayload>(
+        refreshToken,
+        {
+          secret: this.configService.getOrThrow<string>(
+            'JWT_REFRESH_SECRET',
+          ),
+        },
+      );
+    } catch {
+      throw new UnauthorizedException(
+        this.translate('auth.errors.unauthorized'),
+      );
+    }
+  }
+
+  private async blacklistToken(token: string, exp: number): Promise<void> {
+    const now = Math.floor(Date.now() / 1000);
+    const ttl = exp - now;
+
+    if (ttl <= 0) {
+      return;
+    }
+
+    await this.redisService.set(`blacklist:${token}`, '1', ttl);
   }
 
   private translate(key: string): string {

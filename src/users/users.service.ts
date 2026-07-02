@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { Repository } from 'typeorm';
 
-import { User } from './entities/user.entity';
 import { UserResponseDto } from './dto/user-response.dto';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
@@ -43,6 +43,15 @@ export class UsersService {
     const createdUser = this.usersRepository.create(user);
 
     return this.usersRepository.save(createdUser);
+  }
+
+  async updateRefreshTokenHash(
+    userId: number,
+    refreshTokenHash: string | null,
+  ): Promise<void> {
+    await this.usersRepository.update(userId, {
+      refreshTokenHash,
+    });
   }
 
   private translate(key: string): string {

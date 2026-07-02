@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { RedisModule } from './redis/redis.module';
 import * as path from 'path';
 
 import { User } from './users/entities/user.entity';
@@ -40,6 +41,8 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
 
     AuthModule,
+
+    RedisModule,
   ],
 })
 export class AppModule {}

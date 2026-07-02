@@ -47,8 +47,12 @@ export class User {
   })
   status!: UserStatus;
 
-  @Column({ nullable: true })
-  refreshTokenHash?: string;
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  refreshTokenHash!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;
