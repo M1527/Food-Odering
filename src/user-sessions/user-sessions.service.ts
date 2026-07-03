@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcrypt';
-import { Repository } from 'typeorm';
+import { createHash, timingSafeEqual } from 'crypto';
+import { EntityManager, Repository } from 'typeorm';
 
 import { User } from '../users/entities/user.entity';
 import { UserSession } from './entities/user-session.entity';
@@ -13,76 +13,93 @@ export class UserSessionsService {
     private readonly userSessionsRepository: Repository<UserSession>,
   ) {}
 
-  async createPendingSession(user: User): Promise<UserSession> {
-    const session = this.userSessionsRepository.create({
-      user,
-      userId: user.id,
-      refreshTokenHash: 'PENDING',
-      expiredAt: new Date(),
-    });
-
-    return this.userSessionsRepository.save(session);
-  }
-
-  async updateRefreshToken(
-    sessionId: number,
+  async createSession(
+    user: User,
     refreshToken: string,
     expiredAt: Date,
-  ): Promise<void> {
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-
-    await this.userSessionsRepository.update(sessionId, {
+    manager?: EntityManager,
+  ): Promise<UserSession> {
+    const repository = this.getRepository(manager);
+    const refreshTokenHash = this.hashRefreshToken(refreshToken);
+    const session = repository.create({
+      user,
+      userId: user.id,
       refreshTokenHash,
       expiredAt,
     });
+
+    return repository.save(session);
   }
 
-  async findValidSessionByIdAndRefreshToken(
-    sessionId: number,
+  async findValidSessionByUserIdAndRefreshToken(
     userId: number,
     refreshToken: string,
+    manager?: EntityManager,
+    lockSession = false,
   ): Promise<UserSession | null> {
-    if (!Number.isInteger(sessionId) || !Number.isInteger(userId)) {
+    if (!Number.isInteger(userId)) {
       return null;
     }
 
-    const session = await this.userSessionsRepository
+    const queryBuilder = this.getRepository(manager)
       .createQueryBuilder('session')
-      .where('session.id = :sessionId', { sessionId })
-      .andWhere('session.userId = :userId', { userId })
-      .andWhere('session.expiredAt > :now', { now: new Date() })
-      .getOne();
+      .where('session.userId = :userId', { userId })
+      .andWhere('session.expiredAt > :now', { now: new Date() });
 
-    if (!session) {
-      return null;
+    if (lockSession) {
+      queryBuilder.setLock('pessimistic_write');
     }
 
-    const isMatched = await bcrypt.compare(
-      refreshToken,
-      session.refreshTokenHash,
-    );
+    const sessions = await queryBuilder.getMany();
+    const refreshTokenHash = this.hashRefreshToken(refreshToken);
 
-    if (!isMatched) {
-      return null;
+    for (const session of sessions) {
+      const isMatched = this.isSameHash(
+        refreshTokenHash,
+        session.refreshTokenHash,
+      );
+
+      if (isMatched) {
+        return session;
+      }
     }
 
-    return session;
+    return null;
   }
 
   async deleteSessionById(
     sessionId: number,
     userId: number,
+    manager?: EntityManager,
   ): Promise<void> {
     if (!Number.isInteger(sessionId) || !Number.isInteger(userId)) {
       return;
     }
 
-    await this.userSessionsRepository
+    await this.getRepository(manager)
       .createQueryBuilder()
       .delete()
       .from(UserSession)
       .where('id = :sessionId', { sessionId })
       .andWhere('userId = :userId', { userId })
       .execute();
+  }
+
+  private getRepository(manager?: EntityManager): Repository<UserSession> {
+    return manager?.getRepository(UserSession) ?? this.userSessionsRepository;
+  }
+
+  private hashRefreshToken(refreshToken: string): string {
+    return createHash('sha256').update(refreshToken).digest('hex');
+  }
+
+  private isSameHash(hash: string, storedHash: string): boolean {
+    const hashBuffer = Buffer.from(hash);
+    const storedHashBuffer = Buffer.from(storedHash);
+
+    return (
+      hashBuffer.length === storedHashBuffer.length &&
+      timingSafeEqual(hashBuffer, storedHashBuffer)
+    );
   }
 }
