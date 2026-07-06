@@ -1,0 +1,10 @@
+{
+  "messages": {
+    "created": "Tạo danh mục thành công",
+    "updated": "Cập nhật danh mục thành công"
+  },
+  "errors": {
+    "notFound": "Không tìm thấy danh mục",
+    "nameExists": "Tên danh mục đã tồn tại"
+  }
+}

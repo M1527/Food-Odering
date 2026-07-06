@@ -12,6 +12,14 @@ import { Profile } from './profiles/entities/profile.entity';
 import { ProfilesModule } from './profiles/profiles.module';
 import { UserSession } from './user-sessions/entities/user-session.entity';
 import { UserSessionsModule } from './user-sessions/user-sessions.module';
+import { CategoriesModule } from './categories/categories.module';
+import { Category } from './categories/entities/category.entity';
+import { ProductsModule } from './products/products.module';
+import { Product } from './products/entities/product.entity';
+import { AttachmentsModule } from './attachments/attachments.module';
+import { Attachment } from './attachments/entities/attachment.entity';
+
+
 
 @Module({
   imports: [
@@ -37,7 +45,7 @@ import { UserSessionsModule } from './user-sessions/user-sessions.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Profile, UserSession],
+        entities: [User, Profile, UserSession, Category, Product, Attachment],
         synchronize: false,
       }),
     }),
@@ -51,6 +59,12 @@ import { UserSessionsModule } from './user-sessions/user-sessions.module';
     ProfilesModule,
 
     UserSessionsModule,
+
+    CategoriesModule,
+
+    ProductsModule,
+
+    AttachmentsModule,
   ],
 })
 export class AppModule {}
