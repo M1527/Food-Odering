@@ -1,0 +1,8 @@
+{
+  "messages": {
+    "uploaded": "Tải file thành công"
+  },
+  "errors": {
+    "fileRequired": "Vui lòng chọn file"
+  }
+}

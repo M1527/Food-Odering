@@ -1,0 +1,8 @@
+{
+  "messages": {
+    "uploaded": "File uploaded successfully"
+  },
+  "errors": {
+    "fileRequired": "File is required"
+  }
+}

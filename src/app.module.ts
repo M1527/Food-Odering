@@ -18,7 +18,8 @@ import { ProductsModule } from './products/products.module';
 import { Product } from './products/entities/product.entity';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { Attachment } from './attachments/entities/attachment.entity';
-
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 
 @Module({
@@ -48,6 +49,11 @@ import { Attachment } from './attachments/entities/attachment.entity';
         entities: [User, Profile, UserSession, Category, Product, Attachment],
         synchronize: false,
       }),
+    }),
+
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
     }),
 
     UsersModule,
