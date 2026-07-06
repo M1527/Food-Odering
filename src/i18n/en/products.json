@@ -1,0 +1,9 @@
+{
+  "messages": {
+    "created": "Product created successfully",
+    "updated": "Product updated successfully"
+  },
+  "errors": {
+    "notFound": "Product not found"
+  }
+}
