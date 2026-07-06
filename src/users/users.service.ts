@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { Repository } from 'typeorm';
 
-import { User } from './entities/user.entity';
 import { UserResponseDto } from './dto/user-response.dto';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
@@ -17,7 +17,9 @@ export class UsersService {
 
   async findById(id: number): Promise<User> {
     const user = await this.usersRepository.findOne({
-      where: { id },
+      where: {
+        id,
+      },
     });
 
     if (!user) {
@@ -35,7 +37,9 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
-      where: { email },
+      where: {
+        email,
+      },
     });
   }
 

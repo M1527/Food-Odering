@@ -2,11 +2,17 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
+import { Profile } from '../../profiles/entities/profile.entity';
+import { UserSession } from '../../user-sessions/entities/user-session.entity';
+
 export enum UserRole {
+  Guest = 'GUEST',
   User = 'USER',
   Admin = 'ADMIN',
 }
@@ -21,7 +27,9 @@ export class User {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ unique: true })
+  @Column({
+    unique: true,
+  })
   email!: string;
 
   @Column()
@@ -30,7 +38,9 @@ export class User {
   @Column()
   fullName!: string;
 
-  @Column({ nullable: true })
+  @Column({
+    nullable: true,
+  })
   phone?: string;
 
   @Column({
@@ -47,8 +57,11 @@ export class User {
   })
   status!: UserStatus;
 
-  @Column({ nullable: true })
-  refreshTokenHash?: string;
+  @OneToOne(() => Profile, (profile) => profile.user)
+  profile!: Profile;
+
+  @OneToMany(() => UserSession, (session) => session.user)
+  sessions!: UserSession[];
 
   @CreateDateColumn()
   createdAt!: Date;
