@@ -1,11 +1,14 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { unlink } from 'fs/promises';
 import { I18nContext, I18nService } from 'nestjs-i18n';
-import { Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 
+import { AttachmentsService } from '../attachments/attachments.service';
 import { CategoriesService } from '../categories/categories.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
@@ -18,20 +21,60 @@ import { Product, ProductStatus } from './entities/product.entity';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
 
     private readonly categoriesService: CategoriesService,
+    private readonly attachmentsService: AttachmentsService,
+    private readonly dataSource: DataSource,
     private readonly i18n: I18nService,
   ) {}
 
-  async create(createProductDto: CreateProductDto) {
+  async create(
+    createProductDto: CreateProductDto,
+    images: Express.Multer.File[] = [],
+  ) {
+    let result: Awaited<
+      ReturnType<typeof this.createProductWithAttachments>
+    >;
+
+    try {
+      result = await this.dataSource.transaction((manager) =>
+        this.createProductWithAttachments(
+          createProductDto,
+          images,
+          manager,
+        ),
+      );
+    } catch (error) {
+      await this.deleteUploadedFiles(images);
+      throw error;
+    }
+
+    return {
+      message: this.translate('products.messages.created'),
+      product: ProductResponseDto.createFromProduct(
+        result.product,
+        result.images,
+      ),
+    };
+  }
+
+  private async createProductWithAttachments(
+    createProductDto: CreateProductDto,
+    images: Express.Multer.File[],
+    manager: EntityManager,
+  ) {
     const category = await this.categoriesService.getCategoryOrThrow(
       createProductDto.categoryId,
+      manager,
     );
+    const productRepository = manager.getRepository(Product);
 
-    const product = this.productsRepository.create({
+    const product = productRepository.create({
       category,
       categoryId: category.id,
       name: createProductDto.name,
@@ -42,16 +85,41 @@ export class ProductsService {
       status: createProductDto.status ?? ProductStatus.Active,
     });
 
-    try {
-      const savedProduct = await this.productsRepository.save(product);
+    const savedProduct = await productRepository.save(product);
 
-      return {
-        message: this.translate('products.messages.created'),
-        product: ProductResponseDto.createFromProduct(savedProduct),
-      };
-    } catch (error) {
-      throw error;
-    }
+    const savedImages =
+      await this.attachmentsService.createProductAttachments(
+        savedProduct,
+        images,
+        manager,
+      );
+
+    return {
+      product: savedProduct,
+      images: savedImages,
+    };
+  }
+
+  private async deleteUploadedFiles(
+    files: Express.Multer.File[],
+  ): Promise<void> {
+    await Promise.all(
+      files.map(async (file) => {
+        if (!file.path) {
+          return;
+        }
+
+        try {
+          await unlink(file.path);
+        } catch (error) {
+          this.logger.warn(
+            `Failed to delete uploaded file ${file.path}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }),
+    );
   }
 
   async findAll(query: QueryProductsDto) {
@@ -113,9 +181,17 @@ export class ProductsService {
       .take(limit)
       .getManyAndCount();
 
+    const attachmentMap =
+      await this.attachmentsService.findProductAttachmentsByProductIds(
+        products.map((product) => product.id),
+      );
+
     return {
       products: products.map((product) =>
-        ProductResponseDto.createFromProduct(product),
+        ProductResponseDto.createFromProduct(
+          product,
+          attachmentMap.get(product.id) ?? [],
+        ),
       ),
       total,
       page,
@@ -137,9 +213,17 @@ export class ProductsService {
       },
     });
 
+    const attachmentMap =
+      await this.attachmentsService.findProductAttachmentsByProductIds(
+        products.map((product) => product.id),
+      );
+
     return {
       products: products.map((product) =>
-        ProductResponseDto.createFromProduct(product),
+        ProductResponseDto.createFromProduct(
+          product,
+          attachmentMap.get(product.id) ?? [],
+        ),
       ),
       total: products.length,
     };
@@ -147,9 +231,11 @@ export class ProductsService {
 
   async findOne(id: number) {
     const product = await this.getProductOrThrow(id);
+    const images =
+      await this.attachmentsService.findProductAttachments(product.id);
 
     return {
-      product: ProductResponseDto.createFromProduct(product),
+      product: ProductResponseDto.createFromProduct(product, images),
     };
   }
 
@@ -174,20 +260,36 @@ export class ProductsService {
       status: updateProductDto.status ?? product.status,
     });
 
-    try {
-      const updatedProduct = await this.productsRepository.save(product);
+    const updatedProduct = await this.productsRepository.save(product);
+    const images =
+      await this.attachmentsService.findProductAttachments(updatedProduct.id);
 
-      return {
-        message: this.translate('products.messages.updated'),
-        product: ProductResponseDto.createFromProduct(updatedProduct),
-      };
-    } catch (error) {
-      throw error;
-    }
+    return {
+      message: this.translate('products.messages.updated'),
+      product: ProductResponseDto.createFromProduct(updatedProduct, images),
+    };
   }
 
-  async getProductOrThrow(id: number): Promise<Product> {
-    const product = await this.productsRepository.findOne({
+  async remove(id: number) {
+    await this.dataSource.transaction(async (manager) => {
+      await this.getProductOrThrow(id, manager);
+      await this.attachmentsService.softDeleteProductAttachments(
+        id,
+        manager,
+      );
+      await manager.getRepository(Product).softDelete(id);
+    });
+
+    return {
+      message: this.translate('products.messages.deleted'),
+    };
+  }
+
+  async getProductOrThrow(
+    id: number,
+    manager?: EntityManager,
+  ): Promise<Product> {
+    const product = await this.getRepository(manager).findOne({
       where: {
         id,
       },
@@ -203,6 +305,10 @@ export class ProductsService {
     }
 
     return product;
+  }
+
+  private getRepository(manager?: EntityManager): Repository<Product> {
+    return manager?.getRepository(Product) ?? this.productsRepository;
   }
 
   private translate(key: string): string {

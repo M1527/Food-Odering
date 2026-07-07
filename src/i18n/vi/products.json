@@ -1,9 +1,10 @@
 {
   "messages": {
-    "created": "Tạo sản phẩm thành công",
-    "updated": "Cập nhật sản phẩm thành công"
+    "created": "T\u1ea1o s\u1ea3n ph\u1ea9m th\u00e0nh c\u00f4ng",
+    "updated": "C\u1eadp nh\u1eadt s\u1ea3n ph\u1ea9m th\u00e0nh c\u00f4ng",
+    "deleted": "X\u00f3a s\u1ea3n ph\u1ea9m th\u00e0nh c\u00f4ng"
   },
   "errors": {
-    "notFound": "Không tìm thấy sản phẩm"
+    "notFound": "Kh\u00f4ng t\u00ecm th\u1ea5y s\u1ea3n ph\u1ea9m"
   }
 }

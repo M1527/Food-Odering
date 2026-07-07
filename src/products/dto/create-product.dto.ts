@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -14,6 +15,7 @@ import { ProductStatus } from '../entities/product.entity';
 
 export class CreateProductDto {
   @ApiProperty({ example: 1 })
+  @Transform(({ value }) => Number(value))
   @IsInt()
   categoryId!: number;
 
@@ -32,11 +34,13 @@ export class CreateProductDto {
   price!: string;
 
   @ApiProperty({ example: 100 })
+  @Transform(({ value }) => Number(value))
   @IsInt()
   @Min(0)
   stock!: number;
 
   @ApiPropertyOptional({ example: true })
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;

@@ -1,9 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { I18nContext, I18nService } from 'nestjs-i18n';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 
-import { ProductsService } from '../products/products.service';
+import { Product } from '../products/entities/product.entity';
 import { AttachmentResponseDto } from './dto/attachment-response.dto';
 import {
   Attachment,
@@ -15,52 +14,39 @@ export class AttachmentsService {
   constructor(
     @InjectRepository(Attachment)
     private readonly attachmentsRepository: Repository<Attachment>,
-
-    private readonly productsService: ProductsService,
-    private readonly i18n: I18nService,
   ) {}
 
-  async uploadProductAttachment(
-    productId: number,
-    file: Express.Multer.File,
-  ) {
-    await this.productsService.getProductOrThrow(productId);
-
-    if (!file) {
-      throw new BadRequestException(
-        this.translate('attachments.errors.fileRequired'),
-      );
+  async createProductAttachments(
+    product: Product,
+    files: Express.Multer.File[],
+    manager: EntityManager,
+  ): Promise<Attachment[]> {
+    if (!files.length) {
+      return [];
     }
 
-    const normalizedPath = file.path.replace(/\\/g, '/');
+    const repository = manager.getRepository(Attachment);
 
-    const attachment = this.attachmentsRepository.create({
-      filename: file.originalname,
-      path: normalizedPath,
-      url: `http://localhost:3000/${normalizedPath}`,
-      contentType: file.mimetype,
-      size: file.size,
-      objectType: AttachmentObjectType.Product,
-      objectId: productId,
+    const attachments = files.map((file) => {
+      const normalizedPath = file.path.replace(/\\/g, '/');
+
+      return repository.create({
+        filename: file.originalname,
+        path: normalizedPath,
+        url: `http://localhost:3000/${normalizedPath}`,
+        contentType: file.mimetype,
+        size: file.size,
+        objectType: AttachmentObjectType.Product,
+        objectId: product.id,
+      });
     });
 
-    try {
-      const savedAttachment =
-        await this.attachmentsRepository.save(attachment);
-
-      return {
-        message: this.translate('attachments.messages.uploaded'),
-        attachment:
-          AttachmentResponseDto.createFromAttachment(savedAttachment),
-      };
-    } catch (error) {
-      throw error;
-    }
+    return repository.save(attachments);
   }
 
-  async findProductAttachments(productId: number) {
-    await this.productsService.getProductOrThrow(productId);
-
+  async findProductAttachments(
+    productId: number,
+  ): Promise<AttachmentResponseDto[]> {
     const attachments = await this.attachmentsRepository.find({
       where: {
         objectType: AttachmentObjectType.Product,
@@ -71,15 +57,47 @@ export class AttachmentsService {
       },
     });
 
-    return {
-      attachments: attachments.map((attachment) =>
-        AttachmentResponseDto.createFromAttachment(attachment),
-      ),
-      total: attachments.length,
-    };
+    return attachments.map((attachment) =>
+      AttachmentResponseDto.createFromAttachment(attachment),
+    );
   }
 
-  private translate(key: string): string {
-    return this.i18n.t(key, { lang: I18nContext.current()?.lang });
+  async findProductAttachmentsByProductIds(
+    productIds: number[],
+  ): Promise<Map<number, AttachmentResponseDto[]>> {
+    if (!productIds.length) {
+      return new Map();
+    }
+
+    const attachments = await this.attachmentsRepository
+      .createQueryBuilder('attachment')
+      .where('attachment.objectType = :objectType', {
+        objectType: AttachmentObjectType.Product,
+      })
+      .andWhere('attachment.objectId IN (:...productIds)', { productIds })
+      .orderBy('attachment.createdAt', 'DESC')
+      .getMany();
+
+    const map = new Map<number, AttachmentResponseDto[]>();
+
+    for (const attachment of attachments) {
+      const dto = AttachmentResponseDto.createFromAttachment(attachment);
+      const current = map.get(attachment.objectId) ?? [];
+
+      current.push(dto);
+      map.set(attachment.objectId, current);
+    }
+
+    return map;
+  }
+
+  async softDeleteProductAttachments(
+    productId: number,
+    manager: EntityManager,
+  ): Promise<void> {
+    await manager.getRepository(Attachment).softDelete({
+      objectType: AttachmentObjectType.Product,
+      objectId: productId,
+    });
   }
 }

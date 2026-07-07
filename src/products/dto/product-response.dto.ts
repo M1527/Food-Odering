@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { AttachmentResponseDto } from '../../attachments/dto/attachment-response.dto';
 import { CategoryResponseDto } from '../../categories/dto/category-response.dto';
 import { Product, ProductStatus } from '../entities/product.entity';
 
@@ -34,13 +35,19 @@ export class ProductResponseDto {
   @ApiProperty({ type: CategoryResponseDto })
   category!: CategoryResponseDto;
 
+  @ApiProperty({ type: [AttachmentResponseDto] })
+  images!: AttachmentResponseDto[];
+
   @ApiProperty({ example: '2026-07-02T09:00:00.000Z' })
   createdAt!: Date;
 
   @ApiProperty({ example: '2026-07-02T09:00:00.000Z' })
   updatedAt!: Date;
 
-  static createFromProduct(product: Product): ProductResponseDto {
+  static createFromProduct(
+    product: Product,
+    images: AttachmentResponseDto[] = [],
+  ): ProductResponseDto {
     const dto = new ProductResponseDto();
 
     dto.id = product.id;
@@ -52,6 +59,7 @@ export class ProductResponseDto {
     dto.isFeatured = product.isFeatured;
     dto.status = product.status;
     dto.category = CategoryResponseDto.createFromCategory(product.category);
+    dto.images = images;
     dto.createdAt = product.createdAt;
     dto.updatedAt = product.updatedAt;
 
