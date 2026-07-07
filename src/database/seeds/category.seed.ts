@@ -11,22 +11,22 @@ config();
 const categories = [
   {
     name: 'Milk Tea',
-    description: 'Milk tea drinks',
+    description: 'Các loại trà sữa',
     status: CategoryStatus.Active,
   },
   {
     name: 'Coffee',
-    description: 'Coffee drinks',
+    description: 'Các loại cà phê',
     status: CategoryStatus.Active,
   },
   {
     name: 'Juice',
-    description: 'Fresh juices',
+    description: 'Các loại nước ép',
     status: CategoryStatus.Active,
   },
   {
     name: 'Snack',
-    description: 'Snacks',
+    description: 'Đồ ăn nhẹ',
     status: CategoryStatus.Active,
   },
 ];
@@ -53,4 +53,4 @@ async function seedCategories() {
   await AppDataSource.destroy();
 }
 
-void seedCategories();
+seedCategories();
