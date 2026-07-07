@@ -36,7 +36,7 @@ export class ProductResponseDto {
   category!: CategoryResponseDto;
 
   @ApiProperty({ type: [AttachmentResponseDto] })
-  images!: AttachmentResponseDto[];
+  attachments!: AttachmentResponseDto[];
 
   @ApiProperty({ example: '2026-07-02T09:00:00.000Z' })
   createdAt!: Date;
@@ -46,7 +46,7 @@ export class ProductResponseDto {
 
   static createFromProduct(
     product: Product,
-    images: AttachmentResponseDto[] = [],
+    attachments: AttachmentResponseDto[] = [],
   ): ProductResponseDto {
     const dto = new ProductResponseDto();
 
@@ -59,7 +59,7 @@ export class ProductResponseDto {
     dto.isFeatured = product.isFeatured;
     dto.status = product.status;
     dto.category = CategoryResponseDto.createFromCategory(product.category);
-    dto.images = images;
+    dto.attachments = attachments;
     dto.createdAt = product.createdAt;
     dto.updatedAt = product.updatedAt;
 

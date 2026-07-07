@@ -58,7 +58,7 @@ export class ProductsService {
       message: this.translate('products.messages.created'),
       product: ProductResponseDto.createFromProduct(
         result.product,
-        result.images,
+        result.attachments,
       ),
     };
   }
@@ -87,7 +87,7 @@ export class ProductsService {
 
     const savedProduct = await productRepository.save(product);
 
-    const savedImages =
+    const savedAttachments =
       await this.attachmentsService.createProductAttachments(
         savedProduct,
         images,
@@ -96,7 +96,7 @@ export class ProductsService {
 
     return {
       product: savedProduct,
-      images: savedImages,
+      attachments: savedAttachments,
     };
   }
 
@@ -231,11 +231,11 @@ export class ProductsService {
 
   async findOne(id: number) {
     const product = await this.getProductOrThrow(id);
-    const images =
+    const attachments =
       await this.attachmentsService.findProductAttachments(product.id);
 
     return {
-      product: ProductResponseDto.createFromProduct(product, images),
+      product: ProductResponseDto.createFromProduct(product, attachments),
     };
   }
 
@@ -261,12 +261,15 @@ export class ProductsService {
     });
 
     const updatedProduct = await this.productsRepository.save(product);
-    const images =
+    const attachments =
       await this.attachmentsService.findProductAttachments(updatedProduct.id);
 
     return {
       message: this.translate('products.messages.updated'),
-      product: ProductResponseDto.createFromProduct(updatedProduct, images),
+      product: ProductResponseDto.createFromProduct(
+        updatedProduct,
+        attachments,
+      ),
     };
   }
 
