@@ -12,22 +12,28 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiTags,
-} from '@nestjs/swagger';
-import { randomUUID } from 'crypto';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { createFileFieldsInterceptor } from '../common/utils/file.util';
 import { CreateProductDto } from './dto/create-product.dto';
 import { QueryProductsDto } from './dto/query-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductsService } from './products.service';
+
+const ProductImagesInterceptor = createFileFieldsInterceptor(
+  [
+    {
+      name: 'images',
+      maxCount: 10,
+    },
+  ],
+  {
+    destination: 'uploads/products',
+    maxSize: 5 * 1024 * 1024,
+    mimeTypes: ['image/*'],
+  },
+);
 
 @ApiTags('products')
 @Controller()
@@ -82,38 +88,7 @@ export class ProductsController {
       },
     },
   })
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        {
-          name: 'images',
-          maxCount: 10,
-        },
-      ],
-      {
-        storage: diskStorage({
-          destination: 'uploads/products',
-          filename: (_req, file, callback) => {
-            const fileExtension = extname(file.originalname);
-            const encryptedFilename = `${randomUUID()}${fileExtension}`;
-
-            callback(null, encryptedFilename);
-          },
-        }),
-        fileFilter: (_req, file, callback) => {
-          if (!file.mimetype.startsWith('image/')) {
-            callback(new Error('Only image files are allowed'), false);
-            return;
-          }
-
-          callback(null, true);
-        },
-        limits: {
-          fileSize: 5 * 1024 * 1024,
-        },
-      },
-    ),
-  )
+  @UseInterceptors(ProductImagesInterceptor)
   create(
     @Body() createProductDto: CreateProductDto,
     @UploadedFiles()
@@ -121,10 +96,7 @@ export class ProductsController {
       images?: Express.Multer.File[];
     },
   ) {
-    return this.productsService.create(
-      createProductDto,
-      files.images ?? [],
-    );
+    return this.productsService.create(createProductDto, files.images ?? []);
   }
 
   @Get('products')
@@ -145,11 +117,60 @@ export class ProductsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch('admin/products/:id')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        categoryId: {
+          type: 'number',
+          example: 1,
+        },
+        name: {
+          type: 'string',
+          example: 'Milk tea with pearl',
+        },
+        description: {
+          type: 'string',
+          example: 'Traditional milk tea with black pearls',
+        },
+        price: {
+          type: 'string',
+          example: '35000',
+        },
+        stock: {
+          type: 'number',
+          example: 100,
+        },
+        isFeatured: {
+          type: 'boolean',
+          example: true,
+        },
+        status: {
+          type: 'string',
+          enum: ['ACTIVE', 'INACTIVE'],
+          example: 'ACTIVE',
+        },
+        images: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+        },
+      },
+    },
+  })
+  @UseInterceptors(ProductImagesInterceptor)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateProductDto: UpdateProductDto,
+    @UploadedFiles()
+    files?: {
+      images?: Express.Multer.File[];
+    },
   ) {
-    return this.productsService.update(id, updateProductDto);
+    return this.productsService.update(id, updateProductDto, files?.images);
   }
 
   @ApiBearerAuth()

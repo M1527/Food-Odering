@@ -3,6 +3,8 @@
     "uploaded": "File uploaded successfully"
   },
   "errors": {
-    "fileRequired": "File is required"
+    "fileRequired": "File is required",
+    "invalidFileType": "Only {types} files are allowed",
+    "fileTooLarge": "File size must not exceed {maxSize}"
   }
 }

@@ -1,21 +1,15 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { unlink } from 'fs/promises';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 
+import { AttachmentResponseDto } from '../attachments/dto/attachment-response.dto';
 import { AttachmentsService } from '../attachments/attachments.service';
 import { CategoriesService } from '../categories/categories.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
-import {
-  ProductSort,
-  QueryProductsDto,
-} from './dto/query-products.dto';
+import { ProductSort, QueryProductsDto } from './dto/query-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product, ProductStatus } from './entities/product.entity';
 
@@ -37,17 +31,11 @@ export class ProductsService {
     createProductDto: CreateProductDto,
     images: Express.Multer.File[] = [],
   ) {
-    let result: Awaited<
-      ReturnType<typeof this.createProductWithAttachments>
-    >;
+    let result: Awaited<ReturnType<typeof this.createProductWithAttachments>>;
 
     try {
       result = await this.dataSource.transaction((manager) =>
-        this.createProductWithAttachments(
-          createProductDto,
-          images,
-          manager,
-        ),
+        this.createProductWithAttachments(createProductDto, images, manager),
       );
     } catch (error) {
       await this.deleteUploadedFiles(images);
@@ -231,44 +219,96 @@ export class ProductsService {
 
   async findOne(id: number) {
     const product = await this.getProductOrThrow(id);
-    const attachments =
-      await this.attachmentsService.findProductAttachments(product.id);
+    const attachments = await this.attachmentsService.findProductAttachments(
+      product.id,
+    );
 
     return {
       product: ProductResponseDto.createFromProduct(product, attachments),
     };
   }
 
-  async update(id: number, updateProductDto: UpdateProductDto) {
-    const product = await this.getProductOrThrow(id);
+  async update(
+    id: number,
+    updateProductDto: UpdateProductDto,
+    images?: Express.Multer.File[] | null,
+  ) {
+    let result: {
+      product: Product;
+      attachments: AttachmentResponseDto[];
+    };
 
-    if (updateProductDto.categoryId) {
-      const category = await this.categoriesService.getCategoryOrThrow(
-        updateProductDto.categoryId,
-      );
+    try {
+      result = await this.dataSource.transaction(async (manager) => {
+        const product = await this.getProductOrThrow(id, manager);
 
-      product.category = category;
-      product.categoryId = category.id;
+        if (updateProductDto.categoryId) {
+          const category = await this.categoriesService.getCategoryOrThrow(
+            updateProductDto.categoryId,
+            manager,
+          );
+
+          product.category = category;
+          product.categoryId = category.id;
+        }
+
+        Object.assign(product, {
+          name: updateProductDto.name ?? product.name,
+          description: updateProductDto.description ?? product.description,
+          price: updateProductDto.price ?? product.price,
+          stock: updateProductDto.stock ?? product.stock,
+          isFeatured: updateProductDto.isFeatured ?? product.isFeatured,
+          status: updateProductDto.status ?? product.status,
+        });
+
+        const updatedProduct = await manager
+          .getRepository(Product)
+          .save(product);
+
+        if (!Array.isArray(images)) {
+          const attachments =
+            await this.attachmentsService.findProductAttachments(
+              updatedProduct.id,
+            );
+
+          return {
+            product: updatedProduct,
+            attachments,
+          };
+        }
+
+        await this.attachmentsService.softDeleteProductAttachments(
+          updatedProduct.id,
+          manager,
+        );
+
+        const attachments =
+          await this.attachmentsService.createProductAttachments(
+            updatedProduct,
+            images,
+            manager,
+          );
+
+        return {
+          product: updatedProduct,
+          attachments: attachments.map((attachment) =>
+            AttachmentResponseDto.createFromAttachment(attachment),
+          ),
+        };
+      });
+    } catch (error) {
+      if (Array.isArray(images)) {
+        await this.deleteUploadedFiles(images);
+      }
+
+      throw error;
     }
-
-    Object.assign(product, {
-      name: updateProductDto.name ?? product.name,
-      description: updateProductDto.description ?? product.description,
-      price: updateProductDto.price ?? product.price,
-      stock: updateProductDto.stock ?? product.stock,
-      isFeatured: updateProductDto.isFeatured ?? product.isFeatured,
-      status: updateProductDto.status ?? product.status,
-    });
-
-    const updatedProduct = await this.productsRepository.save(product);
-    const attachments =
-      await this.attachmentsService.findProductAttachments(updatedProduct.id);
 
     return {
       message: this.translate('products.messages.updated'),
       product: ProductResponseDto.createFromProduct(
-        updatedProduct,
-        attachments,
+        result.product,
+        result.attachments,
       ),
     };
   }
@@ -276,10 +316,7 @@ export class ProductsService {
   async remove(id: number) {
     await this.dataSource.transaction(async (manager) => {
       await this.getProductOrThrow(id, manager);
-      await this.attachmentsService.softDeleteProductAttachments(
-        id,
-        manager,
-      );
+      await this.attachmentsService.softDeleteProductAttachments(id, manager);
       await manager.getRepository(Product).softDelete(id);
     });
 
@@ -302,9 +339,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(
-        this.translate('products.errors.notFound'),
-      );
+      throw new NotFoundException(this.translate('products.errors.notFound'));
     }
 
     return product;
