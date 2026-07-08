@@ -19,7 +19,7 @@ import { LogoutDto } from '../users/dto/logout.dto';
 import { RefreshTokenDto } from '../users/dto/refresh-token.dto';
 import { RegisterDto } from '../users/dto/register.dto';
 import { UserResponseDto } from '../users/dto/user-response.dto';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 
 type RefreshTokenPayload = {
@@ -61,11 +61,16 @@ export class AuthService {
       passwordHash,
       fullName: registerDto.fullName,
       phone: registerDto.phone,
+      role: UserRole.User,
     });
 
     await this.profilesService.createDefaultProfile(user);
 
-    const accessToken = await this.generateAccessToken(user.id, user.email);
+    const accessToken = await this.generateAccessToken(
+      user.id,
+      user.email,
+      user.role,
+    );
     const refreshToken = await this.createRefreshTokenSession(user);
 
     return {
@@ -96,7 +101,11 @@ export class AuthService {
       );
     }
 
-    const accessToken = await this.generateAccessToken(user.id, user.email);
+    const accessToken = await this.generateAccessToken(
+      user.id,
+      user.email,
+      user.role,
+    );
     const refreshToken = await this.createRefreshTokenSession(user);
 
     return {
@@ -135,7 +144,11 @@ export class AuthService {
       return this.createRefreshTokenSession(user, manager);
     });
 
-    const accessToken = await this.generateAccessToken(user.id, user.email);
+    const accessToken = await this.generateAccessToken(
+      user.id,
+      user.email,
+      user.role,
+    );
 
     return {
       message: this.translate('auth.messages.tokenRefreshed'),
@@ -198,6 +211,7 @@ export class AuthService {
   private async generateAccessToken(
     userId: number,
     email: string,
+    role: UserRole,
   ): Promise<string> {
     const expiresIn = this.configService.getOrThrow<SignOptions['expiresIn']>(
       'JWT_ACCESS_EXPIRES_IN',
@@ -207,6 +221,7 @@ export class AuthService {
       {
         sub: userId,
         email,
+        role,
       },
       {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
