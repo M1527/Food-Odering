@@ -1,0 +1,10 @@
+{
+  "messages": {
+    "created": "Tạo sản phẩm thành công",
+    "updated": "Cập nhật sản phẩm thành công",
+    "deleted": "Xóa sản phẩm thành công"
+  },
+  "errors": {
+    "notFound": "Không tìm thấy sản phẩm"
+  }
+}

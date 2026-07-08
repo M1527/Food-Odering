@@ -12,6 +12,16 @@ import { Profile } from './profiles/entities/profile.entity';
 import { ProfilesModule } from './profiles/profiles.module';
 import { UserSession } from './user-sessions/entities/user-session.entity';
 import { UserSessionsModule } from './user-sessions/user-sessions.module';
+import { CategoriesModule } from './categories/categories.module';
+import { Category } from './categories/entities/category.entity';
+import { ProductsModule } from './products/products.module';
+import { Product } from './products/entities/product.entity';
+import { AttachmentsModule } from './attachments/attachments.module';
+import { Attachment } from './attachments/entities/attachment.entity';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { CartModule } from './cart/cart.module';
+
 
 @Module({
   imports: [
@@ -37,9 +47,14 @@ import { UserSessionsModule } from './user-sessions/user-sessions.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Profile, UserSession],
+        entities: [User, Profile, UserSession, Category, Product, Attachment],
         synchronize: false,
       }),
+    }),
+
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
     }),
 
     UsersModule,
@@ -51,6 +66,14 @@ import { UserSessionsModule } from './user-sessions/user-sessions.module';
     ProfilesModule,
 
     UserSessionsModule,
+
+    CategoriesModule,
+
+    ProductsModule,
+
+    AttachmentsModule,
+
+    CartModule,
   ],
 })
 export class AppModule {}

@@ -1,0 +1,10 @@
+{
+  "messages": {
+    "created": "Category created successfully",
+    "updated": "Category updated successfully"
+  },
+  "errors": {
+    "notFound": "Category not found",
+    "nameExists": "Category name already exists"
+  }
+}

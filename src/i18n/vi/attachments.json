@@ -1,0 +1,10 @@
+{
+  "messages": {
+    "uploaded": "Tải file thành công"
+  },
+  "errors": {
+    "fileRequired": "Vui lòng chọn file",
+    "invalidFileType": "Chỉ cho phép tải file {types}",
+    "fileTooLarge": "Dung lượng file không được vượt quá {maxSize}"
+  }
+}
