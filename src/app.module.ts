@@ -20,6 +20,7 @@ import { AttachmentsModule } from './attachments/attachments.module';
 import { Attachment } from './attachments/entities/attachment.entity';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { CartModule } from './cart/cart.module';
 
 
 @Module({
@@ -71,6 +72,8 @@ import { join } from 'path';
     ProductsModule,
 
     AttachmentsModule,
+
+    CartModule,
   ],
 })
 export class AppModule {}

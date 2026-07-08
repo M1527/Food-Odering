@@ -19,7 +19,7 @@ export class AttachmentResponseDto {
 
   @ApiProperty({
     example:
-      'http://localhost:3000/uploads/products/550e8400-e29b-41d4-a716-446655440000.jpg',
+      'https://api.example.com/uploads/products/550e8400-e29b-41d4-a716-446655440000.jpg',
   })
   url!: string;
 
@@ -47,9 +47,7 @@ export class AttachmentResponseDto {
   @ApiProperty({ example: '2026-07-02T09:00:00.000Z' })
   updatedAt!: Date;
 
-  static createFromAttachment(
-    attachment: Attachment,
-  ): AttachmentResponseDto {
+  static createFromAttachment(attachment: Attachment): AttachmentResponseDto {
     const dto = new AttachmentResponseDto();
 
     dto.id = attachment.id;

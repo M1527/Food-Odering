@@ -1,19 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 
 import { Product } from '../products/entities/product.entity';
 import { AttachmentResponseDto } from './dto/attachment-response.dto';
-import {
-  Attachment,
-  AttachmentObjectType,
-} from './entities/attachment.entity';
+import { Attachment, AttachmentObjectType } from './entities/attachment.entity';
 
 @Injectable()
 export class AttachmentsService {
   constructor(
     @InjectRepository(Attachment)
     private readonly attachmentsRepository: Repository<Attachment>,
+    private readonly configService: ConfigService,
   ) {}
 
   async createProductAttachments(
@@ -26,6 +25,9 @@ export class AttachmentsService {
     }
 
     const repository = manager.getRepository(Attachment);
+    const appUrl = this.configService
+      .getOrThrow<string>('APP_URL')
+      .replace(/\/+$/, '');
 
     const attachments = files.map((file) => {
       const normalizedPath = file.path.replace(/\\/g, '/');
@@ -33,7 +35,7 @@ export class AttachmentsService {
       return repository.create({
         filename: file.originalname,
         path: normalizedPath,
-        url: `http://localhost:3000/${normalizedPath}`,
+        url: `${appUrl}/${normalizedPath}`,
         contentType: file.mimetype,
         size: file.size,
         objectType: AttachmentObjectType.Product,
