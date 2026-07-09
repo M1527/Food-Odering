@@ -1,0 +1,13 @@
+{
+  "messages": {
+    "itemAdded": "Product added to cart successfully",
+    "itemUpdated": "Cart updated successfully",
+    "itemRemoved": "Product removed from cart successfully"
+  },
+  "errors": {
+    "itemNotFound": "Cart item not found",
+    "productInactive": "Product is not available",
+    "outOfStock": "Product is out of stock",
+    "exceedStock": "Quantity exceeds product stock"
+  }
+}
