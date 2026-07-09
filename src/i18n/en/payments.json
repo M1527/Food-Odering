@@ -4,6 +4,7 @@
   },
   "errors": {
     "alreadyPaid": "Order already has payment information",
-    "orderCanceled": "Cannot pay a canceled order"
+    "orderCanceled": "Cannot pay a canceled order",
+    "forbidden": "You are not allowed to pay this order"
   }
 }

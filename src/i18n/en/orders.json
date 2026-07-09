@@ -6,9 +6,11 @@
   "errors": {
     "notFound": "Order not found",
     "cartEmpty": "Cart is empty",
+    "checkoutInProgress": "Checkout is already in progress",
     "productInactive": "Product is not available",
     "exceedStock": "Quantity exceeds product stock",
     "cannotCancel": "Only pending orders can be canceled",
+    "cannotCancelPaid": "Paid orders cannot be canceled",
     "forbidden": "You are not allowed to access this order"
   }
 }

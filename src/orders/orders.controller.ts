@@ -12,7 +12,10 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserRole } from '../users/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrdersService } from './orders.service';
 
@@ -52,6 +55,8 @@ export class OrdersController {
   }
 
   @Get('admin/orders')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.Admin)
   findAdminOrders() {
     return this.ordersService.findAdminOrders();
   }

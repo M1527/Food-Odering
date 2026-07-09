@@ -1,13 +1,13 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { I18nContext, I18nService } from 'nestjs-i18n';
-import { Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 
-import { OrdersService } from '../orders/orders.service';
-import { OrderStatus } from '../orders/entities/order.entity';
+import { Order, OrderStatus } from '../orders/entities/order.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
 import {
@@ -19,58 +19,74 @@ import {
 @Injectable()
 export class PaymentsService {
   constructor(
-    @InjectRepository(Payment)
-    private readonly paymentsRepository: Repository<Payment>,
-
-    private readonly ordersService: OrdersService,
+    private readonly dataSource: DataSource,
     private readonly i18n: I18nService,
   ) {}
 
-  async create(orderId: number, createPaymentDto: CreatePaymentDto) {
-    const order = await this.ordersService.getOrderOrThrow(orderId);
+  async create(
+    userId: number,
+    orderId: number,
+    createPaymentDto: CreatePaymentDto,
+  ) {
+    const savedPayment = await this.dataSource.transaction(async (manager) => {
+      const orderRepository = manager.getRepository(Order);
+      const paymentRepository = manager.getRepository(Payment);
 
-    if (order.status === OrderStatus.Canceled) {
-      throw new BadRequestException(
-        this.translate('payments.errors.orderCanceled'),
-      );
-    }
+      const order = await orderRepository.findOne({
+        where: {
+          id: orderId,
+        },
+        relations: {
+          payment: true,
+        },
+        lock: {
+          mode: 'pessimistic_write',
+        },
+      });
 
-    const existingPayment = await this.paymentsRepository.findOne({
-      where: {
-        orderId,
-      },
+      if (!order) {
+        throw new NotFoundException(this.translate('orders.errors.notFound'));
+      }
+
+      if (order.userId !== userId) {
+        throw new ForbiddenException(
+          this.translate('payments.errors.forbidden'),
+        );
+      }
+
+      if (order.status === OrderStatus.Canceled) {
+        throw new BadRequestException(
+          this.translate('payments.errors.orderCanceled'),
+        );
+      }
+
+      if (order.payment) {
+        throw new BadRequestException(
+          this.translate('payments.errors.alreadyPaid'),
+        );
+      }
+
+      const status =
+        createPaymentDto.method === PaymentMethod.Cod
+          ? PaymentStatus.Pending
+          : PaymentStatus.Paid;
+
+      const payment = paymentRepository.create({
+        orderId: order.id,
+        order,
+        method: createPaymentDto.method,
+        status,
+        amount: order.totalAmount,
+        paidAt: status === PaymentStatus.Paid ? new Date() : undefined,
+      });
+
+      return paymentRepository.save(payment);
     });
 
-    if (existingPayment) {
-      throw new BadRequestException(
-        this.translate('payments.errors.alreadyPaid'),
-      );
-    }
-
-    const status =
-      createPaymentDto.method === PaymentMethod.Cod
-        ? PaymentStatus.Pending
-        : PaymentStatus.Paid;
-
-    const payment = this.paymentsRepository.create({
-      orderId: order.id,
-      order,
-      method: createPaymentDto.method,
-      status,
-      amount: order.totalAmount,
-      paidAt: status === PaymentStatus.Paid ? new Date() : undefined,
-    });
-
-    try {
-      const savedPayment = await this.paymentsRepository.save(payment);
-
-      return {
-        message: this.translate('payments.messages.created'),
-        payment: PaymentResponseDto.createFromPayment(savedPayment),
-      };
-    } catch (error) {
-      throw error;
-    }
+    return {
+      message: this.translate('payments.messages.created'),
+      payment: PaymentResponseDto.createFromPayment(savedPayment),
+    };
   }
 
   private translate(key: string): string {

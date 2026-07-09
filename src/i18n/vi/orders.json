@@ -6,9 +6,11 @@
   "errors": {
     "notFound": "Không tìm thấy đơn hàng",
     "cartEmpty": "Giỏ hàng đang trống",
+    "checkoutInProgress": "Đơn hàng đang được xử lý",
     "productInactive": "Sản phẩm hiện không khả dụng",
     "exceedStock": "Số lượng sản phẩm vượt quá tồn kho",
     "cannotCancel": "Chỉ có thể hủy đơn hàng đang chờ xử lý",
+    "cannotCancelPaid": "Không thể hủy đơn hàng đã thanh toán",
     "forbidden": "Bạn không có quyền thao tác đơn hàng này"
   }
 }

@@ -4,6 +4,7 @@
   },
   "errors": {
     "alreadyPaid": "Đơn hàng đã có thông tin thanh toán",
-    "orderCanceled": "Không thể thanh toán đơn hàng đã hủy"
+    "orderCanceled": "Không thể thanh toán đơn hàng đã hủy",
+    "forbidden": "Bạn không có quyền thanh toán đơn hàng này"
   }
 }

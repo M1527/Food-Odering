@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { CartModule } from '../cart/cart.module';
 import { ProductsModule } from '../products/products.module';
 import { RedisModule } from '../redis/redis.module';
@@ -17,7 +18,7 @@ import { OrdersService } from './orders.service';
     RedisModule,
   ],
   controllers: [OrdersController],
-  providers: [OrdersService],
+  providers: [OrdersService, RolesGuard],
   exports: [OrdersService],
 })
 export class OrdersModule {}
