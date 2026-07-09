@@ -8,6 +8,9 @@ import { UserSession } from '../user-sessions/entities/user-session.entity';
 import { Attachment } from '../attachments/entities/attachment.entity';
 import { Category } from '../categories/entities/category.entity';
 import { Product } from '../products/entities/product.entity';
+import { OrderItem } from '../orders/entities/order-item.entity';
+import { Order } from '../orders/entities/order.entity';
+import { Payment } from '../payments/entities/payment.entity';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -16,7 +19,17 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User, Profile, UserSession, Category, Product, Attachment],
+  entities: [
+  User,
+  Profile,
+  UserSession,
+  Category,
+  Product,
+  Attachment,
+  Order,
+  OrderItem,
+  Payment,
+  ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,
 });

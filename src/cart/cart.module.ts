@@ -9,5 +9,6 @@ import { CartService } from './cart.service';
   imports: [RedisModule, ProductsModule],
   controllers: [CartController],
   providers: [CartService],
+  exports: [CartService],
 })
 export class CartModule {}

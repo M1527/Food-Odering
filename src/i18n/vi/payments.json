@@ -1,0 +1,9 @@
+{
+  "messages": {
+    "created": "Thanh toán đơn hàng thành công"
+  },
+  "errors": {
+    "alreadyPaid": "Đơn hàng đã có thông tin thanh toán",
+    "orderCanceled": "Không thể thanh toán đơn hàng đã hủy"
+  }
+}

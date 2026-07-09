@@ -145,6 +145,10 @@ export class CartService {
     };
   }
 
+  async clearCart(userId: number): Promise<void> {
+    await this.redisService.del(this.getCartKey(userId));
+}
+
   private async getCartItems(userId: number): Promise<RedisCartItem[]> {
     const rawCart = await this.redisService.get(this.getCartKey(userId));
 

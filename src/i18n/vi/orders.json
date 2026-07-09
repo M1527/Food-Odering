@@ -1,0 +1,14 @@
+{
+  "messages": {
+    "created": "Tạo đơn hàng thành công",
+    "canceled": "Hủy đơn hàng thành công"
+  },
+  "errors": {
+    "notFound": "Không tìm thấy đơn hàng",
+    "cartEmpty": "Giỏ hàng đang trống",
+    "productInactive": "Sản phẩm hiện không khả dụng",
+    "exceedStock": "Số lượng sản phẩm vượt quá tồn kho",
+    "cannotCancel": "Chỉ có thể hủy đơn hàng đang chờ xử lý",
+    "forbidden": "Bạn không có quyền thao tác đơn hàng này"
+  }
+}
