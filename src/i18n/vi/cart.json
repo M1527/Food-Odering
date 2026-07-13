@@ -1,0 +1,13 @@
+{
+  "messages": {
+    "itemAdded": "Thêm sản phẩm vào giỏ hàng thành công",
+    "itemUpdated": "Cập nhật giỏ hàng thành công",
+    "itemRemoved": "Xóa sản phẩm khỏi giỏ hàng thành công"
+  },
+  "errors": {
+    "itemNotFound": "Không tìm thấy sản phẩm trong giỏ hàng",
+    "productInactive": "Sản phẩm hiện không khả dụng",
+    "outOfStock": "Sản phẩm đã hết hàng",
+    "exceedStock": "Số lượng vượt quá tồn kho"
+  }
+}
