@@ -2,7 +2,10 @@
   "messages": {
     "created": "Product created successfully",
     "updated": "Product updated successfully",
-    "deleted": "Product deleted successfully"
+    "deleted": "Product deleted successfully",
+    "found": "Products fetched successfully",
+    "foundFeatured": "Featured products fetched successfully",
+    "foundOne": "Product fetched successfully"
   },
   "errors": {
     "notFound": "Product not found"

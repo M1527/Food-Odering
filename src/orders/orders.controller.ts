@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
 
 type AuthenticatedRequest = Request & {
@@ -59,5 +60,15 @@ export class OrdersController {
   @Roles(UserRole.Admin)
   findAdminOrders() {
     return this.ordersService.findAdminOrders();
+  }
+
+  @Patch('admin/orders/:id/status')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.Admin)
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateOrderStatusDto: UpdateOrderStatusDto,
+  ) {
+    return this.ordersService.updateStatus(id, updateOrderStatusDto.status);
   }
 }

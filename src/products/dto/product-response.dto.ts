@@ -3,6 +3,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { AttachmentResponseDto } from '../../attachments/dto/attachment-response.dto';
 import { CategoryResponseDto } from '../../categories/dto/category-response.dto';
 import { Product, ProductStatus } from '../entities/product.entity';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+
+export type ProductReviewStatsDto = {
+  ratingAverage: number;
+  reviewsCount: number;
+};
 
 export class ProductResponseDto {
   @ApiProperty({ example: 1 })
@@ -38,15 +44,32 @@ export class ProductResponseDto {
   @ApiProperty({ type: [AttachmentResponseDto] })
   attachments!: AttachmentResponseDto[];
 
+  @ApiProperty({ example: 4.7 })
+  ratingAverage!: number;
+
+  @ApiProperty({ example: 20 })
+  reviewsCount!: number;
+
   @ApiProperty({ example: '2026-07-02T09:00:00.000Z' })
   createdAt!: Date;
 
   @ApiProperty({ example: '2026-07-02T09:00:00.000Z' })
   updatedAt!: Date;
 
+  @ApiPropertyOptional({ example: 120 })
+  soldCount?: number;
+
   static createFromProduct(
     product: Product,
     attachments: AttachmentResponseDto[] = [],
+    reviewStats: {
+      ratingAverage: number;
+      reviewsCount: number;
+    } = {
+      ratingAverage: 0,
+      reviewsCount: 0,
+    },
+    soldCount?: number,
   ): ProductResponseDto {
     const dto = new ProductResponseDto();
 
@@ -60,8 +83,14 @@ export class ProductResponseDto {
     dto.status = product.status;
     dto.category = CategoryResponseDto.createFromCategory(product.category);
     dto.attachments = attachments;
+    dto.ratingAverage = reviewStats.ratingAverage;
+    dto.reviewsCount = reviewStats.reviewsCount;
     dto.createdAt = product.createdAt;
     dto.updatedAt = product.updatedAt;
+
+    if (soldCount !== undefined) {
+      dto.soldCount = soldCount;
+    }
 
     return dto;
   }

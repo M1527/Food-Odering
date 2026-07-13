@@ -1,7 +1,8 @@
 {
   "messages": {
     "created": "Order created successfully",
-    "canceled": "Order canceled successfully"
+    "canceled": "Order canceled successfully",
+    "statusUpdated": "Order status updated successfully"
   },
   "errors": {
     "notFound": "Order not found",
@@ -11,6 +12,9 @@
     "exceedStock": "Quantity exceeds product stock",
     "cannotCancel": "Only pending orders can be canceled",
     "cannotCancelPaid": "Paid orders cannot be canceled",
-    "forbidden": "You are not allowed to access this order"
+    "forbidden": "You are not allowed to access this order",
+    "invalidStatusTransition": "The requested order status transition is not allowed",
+    "paymentRequired": "The order must have payment information before it can be processed",
+    "paymentNotCompleted": "The order payment has not been completed"
   }
 }

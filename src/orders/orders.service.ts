@@ -11,7 +11,11 @@ import { I18nContext, I18nService } from 'nestjs-i18n';
 import { DataSource, Repository } from 'typeorm';
 
 import { CartService } from '../cart/cart.service';
-import { Payment, PaymentStatus } from '../payments/entities/payment.entity';
+import {
+  Payment,
+  PaymentMethod,
+  PaymentStatus,
+} from '../payments/entities/payment.entity';
 import { Product, ProductStatus } from '../products/entities/product.entity';
 import { RedisService } from '../redis/redis.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -278,6 +282,83 @@ export class OrdersService {
 
     return {
       message: this.translate('orders.messages.canceled'),
+      order: OrderResponseDto.createFromOrder(updatedOrder),
+    };
+  }
+
+  async updateStatus(orderId: number, nextStatus: OrderStatus) {
+    const updatedOrder = await this.dataSource.transaction(async (manager) => {
+      const orderRepository = manager.getRepository(Order);
+      const paymentRepository = manager.getRepository(Payment);
+
+      const order = await orderRepository.findOne({
+        where: {
+          id: orderId,
+        },
+        relations: {
+          items: true,
+          payment: true,
+        },
+        lock: {
+          mode: 'pessimistic_write',
+        },
+      });
+
+      if (!order) {
+        throw new NotFoundException(this.translate('orders.errors.notFound'));
+      }
+
+      const allowedNextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
+        [OrderStatus.Pending]: OrderStatus.Confirmed,
+        [OrderStatus.Confirmed]: OrderStatus.Shipping,
+        [OrderStatus.Shipping]: OrderStatus.Done,
+      };
+
+      if (allowedNextStatus[order.status] !== nextStatus) {
+        throw new BadRequestException(
+          this.translate('orders.errors.invalidStatusTransition'),
+        );
+      }
+
+      if (!order.payment) {
+        throw new BadRequestException(
+          this.translate('orders.errors.paymentRequired'),
+        );
+      }
+
+      if (
+        order.payment.status === PaymentStatus.Failed ||
+        order.payment.status === PaymentStatus.Refunded ||
+        (order.payment.method === PaymentMethod.Bank &&
+          order.payment.status !== PaymentStatus.Paid)
+      ) {
+        throw new BadRequestException(
+          this.translate('orders.errors.paymentNotCompleted'),
+        );
+      }
+
+      if (nextStatus === OrderStatus.Done) {
+        if (
+          order.payment.method === PaymentMethod.Cod &&
+          order.payment.status === PaymentStatus.Pending
+        ) {
+          order.payment.status = PaymentStatus.Paid;
+          order.payment.paidAt = new Date();
+          await paymentRepository.save(order.payment);
+        } else if (order.payment.status !== PaymentStatus.Paid) {
+          throw new BadRequestException(
+            this.translate('orders.errors.paymentNotCompleted'),
+          );
+        }
+      }
+
+      order.status = nextStatus;
+
+      return orderRepository.save(order);
+    });
+
+    return {
+      message: this.translate('orders.messages.statusUpdated'),
       order: OrderResponseDto.createFromOrder(updatedOrder),
     };
   }
