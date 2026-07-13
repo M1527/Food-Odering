@@ -57,7 +57,7 @@ export class CartService {
         items: responseItems,
         total: total.toFixed(2),
     };
-    }
+  }
 
   async addItem(userId: number, addCartItemDto: AddCartItemDto) {
     const product = await this.productsService.getProductOrThrow(
