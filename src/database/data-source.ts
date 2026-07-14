@@ -12,6 +12,7 @@ import { OrderItem } from '../orders/entities/order-item.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { Review } from '../reviews/entities/review.entity';
+import { Notification } from '../notifications/entities/notification.entity';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -31,6 +32,7 @@ export const AppDataSource = new DataSource({
   OrderItem,
   Payment,
   Review,
+  Notification,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,

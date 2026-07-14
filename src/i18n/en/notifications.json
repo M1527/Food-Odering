@@ -1,0 +1,27 @@
+{
+  "messages": {
+    "sent": "Notification sent successfully"
+  },
+  "orderStatus": {
+    "PENDING": {
+      "title": "Order is pending",
+      "content": "Your order #{orderCode} is pending"
+    },
+    "CONFIRMED": {
+      "title": "Order confirmed",
+      "content": "Your order #{orderCode} has been confirmed"
+    },
+    "SHIPPING": {
+      "title": "Order is shipping",
+      "content": "Your order #{orderCode} is being delivered"
+    },
+    "DONE": {
+      "title": "Order completed",
+      "content": "Your order #{orderCode} has been completed"
+    },
+    "CANCELED": {
+      "title": "Order canceled",
+      "content": "Your order #{orderCode} has been canceled"
+    }
+  }
+}

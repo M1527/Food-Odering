@@ -28,6 +28,9 @@ import { OrderItem } from './orders/entities/order-item.entity';
 import { Payment } from './payments/entities/payment.entity';
 import { ReviewsModule } from './reviews/reviews.module';
 import { Review } from './reviews/entities/review.entity';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { Notification } from './notifications/entities/notification.entity';
+import { NotificationsModule } from './notifications/notifications.module';
 
 
 @Module({
@@ -54,7 +57,7 @@ import { Review } from './reviews/entities/review.entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Profile, UserSession, Category, Product, Attachment, Order, OrderItem, Payment, Review],
+        entities: [User, Profile, UserSession, Category, Product, Attachment, Order, OrderItem, Payment, Review, Notification],
         synchronize: false,
       })
     }),
@@ -63,6 +66,8 @@ import { Review } from './reviews/entities/review.entity';
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
+
+    EventEmitterModule.forRoot(),
 
     UsersModule,
 
@@ -87,6 +92,8 @@ import { Review } from './reviews/entities/review.entity';
     PaymentsModule,
 
     ReviewsModule,
+
+    NotificationsModule,
   ],
 })
 export class AppModule {}

@@ -10,6 +10,7 @@ import {
 
 import { Profile } from '../../profiles/entities/profile.entity';
 import { UserSession } from '../../user-sessions/entities/user-session.entity';
+import { Notification } from '../../notifications/entities/notification.entity';
 
 export enum UserRole {
   Guest = 'GUEST',
@@ -68,4 +69,10 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @OneToMany(
+    () => Notification,
+    (notification) => notification.user,
+  )
+  notifications!: Notification[];
 }
