@@ -15,6 +15,7 @@
     "forbidden": "Bạn không có quyền thao tác đơn hàng này",
     "invalidStatusTransition": "Không thể chuyển sang trạng thái đơn hàng này",
     "paymentRequired": "Đơn hàng phải có thông tin thanh toán trước khi xử lý",
-    "paymentNotCompleted": "Thanh toán của đơn hàng chưa hoàn tất"
+    "paymentNotCompleted": "Thanh toán của đơn hàng chưa hoàn tất",
+    "statusUpdateFailed": "Cập nhật trạng thái đơn hàng thất bại"
   }
 }

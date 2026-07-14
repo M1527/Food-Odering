@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -287,75 +289,92 @@ export class OrdersService {
   }
 
   async updateStatus(orderId: number, nextStatus: OrderStatus) {
-    const updatedOrder = await this.dataSource.transaction(async (manager) => {
-      const orderRepository = manager.getRepository(Order);
-      const paymentRepository = manager.getRepository(Payment);
+    let updatedOrder: Order;
 
-      const order = await orderRepository.findOne({
-        where: {
-          id: orderId,
-        },
-        relations: {
-          items: true,
-          payment: true,
-        },
-        lock: {
-          mode: 'pessimistic_write',
-        },
-      });
+    try {
+      updatedOrder = await this.dataSource.transaction(async (manager) => {
+        const orderRepository = manager.getRepository(Order);
+        const paymentRepository = manager.getRepository(Payment);
 
-      if (!order) {
-        throw new NotFoundException(this.translate('orders.errors.notFound'));
-      }
+        const order = await orderRepository.findOne({
+          where: {
+            id: orderId,
+          },
+          relations: {
+            items: true,
+            payment: true,
+          },
+          lock: {
+            mode: 'pessimistic_write',
+          },
+        });
 
-      const allowedNextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
-        [OrderStatus.Pending]: OrderStatus.Confirmed,
-        [OrderStatus.Confirmed]: OrderStatus.Shipping,
-        [OrderStatus.Shipping]: OrderStatus.Done,
-      };
+        if (!order) {
+          throw new NotFoundException(this.translate('orders.errors.notFound'));
+        }
 
-      if (allowedNextStatus[order.status] !== nextStatus) {
-        throw new BadRequestException(
-          this.translate('orders.errors.invalidStatusTransition'),
-        );
-      }
+        const allowedNextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
+          [OrderStatus.Pending]: OrderStatus.Confirmed,
+          [OrderStatus.Confirmed]: OrderStatus.Shipping,
+          [OrderStatus.Shipping]: OrderStatus.Done,
+        };
 
-      if (!order.payment) {
-        throw new BadRequestException(
-          this.translate('orders.errors.paymentRequired'),
-        );
-      }
+        if (allowedNextStatus[order.status] !== nextStatus) {
+          throw new BadRequestException(
+            this.translate('orders.errors.invalidStatusTransition'),
+          );
+        }
 
-      if (
-        order.payment.status === PaymentStatus.Failed ||
-        order.payment.status === PaymentStatus.Refunded ||
-        (order.payment.method === PaymentMethod.Bank &&
-          order.payment.status !== PaymentStatus.Paid)
-      ) {
-        throw new BadRequestException(
-          this.translate('orders.errors.paymentNotCompleted'),
-        );
-      }
+        if (!order.payment) {
+          throw new BadRequestException(
+            this.translate('orders.errors.paymentRequired'),
+          );
+        }
 
-      if (nextStatus === OrderStatus.Done) {
         if (
-          order.payment.method === PaymentMethod.Cod &&
-          order.payment.status === PaymentStatus.Pending
+          order.payment.status === PaymentStatus.Failed ||
+          order.payment.status === PaymentStatus.Refunded ||
+          (order.payment.method === PaymentMethod.Bank &&
+            order.payment.status !== PaymentStatus.Paid)
         ) {
-          order.payment.status = PaymentStatus.Paid;
-          order.payment.paidAt = new Date();
-          await paymentRepository.save(order.payment);
-        } else if (order.payment.status !== PaymentStatus.Paid) {
           throw new BadRequestException(
             this.translate('orders.errors.paymentNotCompleted'),
           );
         }
+
+        if (nextStatus === OrderStatus.Done) {
+          if (
+            order.payment.method === PaymentMethod.Cod &&
+            order.payment.status === PaymentStatus.Pending
+          ) {
+            order.payment.status = PaymentStatus.Paid;
+            order.payment.paidAt = new Date();
+            await paymentRepository.save(order.payment);
+          } else if (order.payment.status !== PaymentStatus.Paid) {
+            throw new BadRequestException(
+              this.translate('orders.errors.paymentNotCompleted'),
+            );
+          }
+        }
+
+        order.status = nextStatus;
+
+        return orderRepository.save(order);
+      });
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
       }
 
-      order.status = nextStatus;
+      this.logger.error(
+        `Failed to update order ${orderId} status to ${nextStatus}`,
+        error instanceof Error ? error.stack : String(error),
+      );
 
-      return orderRepository.save(order);
-    });
+      throw new InternalServerErrorException(
+        this.translate('orders.errors.statusUpdateFailed'),
+      );
+    }
 
     return {
       message: this.translate('orders.messages.statusUpdated'),
