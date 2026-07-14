@@ -342,19 +342,13 @@ export class OrdersService {
           );
         }
 
-        if (nextStatus === OrderStatus.Done) {
-          if (
-            order.payment.method === PaymentMethod.Cod &&
-            order.payment.status === PaymentStatus.Pending
-          ) {
-            order.payment.status = PaymentStatus.Paid;
-            order.payment.paidAt = new Date();
-            await paymentRepository.save(order.payment);
-          } else if (order.payment.status !== PaymentStatus.Paid) {
-            throw new BadRequestException(
-              this.translate('orders.errors.paymentNotCompleted'),
-            );
-          }
+        if (
+          nextStatus === OrderStatus.Done &&
+          order.payment.status === PaymentStatus.Pending
+        ) {
+          order.payment.status = PaymentStatus.Paid;
+          order.payment.paidAt = new Date();
+          await paymentRepository.save(order.payment);
         }
 
         order.status = nextStatus;
