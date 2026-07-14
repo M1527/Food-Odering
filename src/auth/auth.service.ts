@@ -8,9 +8,10 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import type { SignOptions } from 'jsonwebtoken';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
 import { DataSource, EntityManager } from 'typeorm';
 
+import { translate } from '../common/utils/i18n.util';
 import { ProfilesService } from '../profiles/profiles.service';
 import { RedisService } from '../redis/redis.service';
 import { UserSessionsService } from '../user-sessions/user-sessions.service';
@@ -51,7 +52,9 @@ export class AuthService {
     const existingUser = await this.usersService.findByEmail(registerDto.email);
 
     if (existingUser) {
-      throw new ConflictException(this.translate('auth.errors.emailExists'));
+      throw new ConflictException(
+        translate(this.i18n, 'auth.errors.emailExists'),
+      );
     }
 
     const passwordHash = await bcrypt.hash(registerDto.password, 10);
@@ -74,7 +77,7 @@ export class AuthService {
     const refreshToken = await this.createRefreshTokenSession(user);
 
     return {
-      message: this.translate('auth.messages.registered'),
+      message: translate(this.i18n, 'auth.messages.registered'),
       user: UserResponseDto.createFromUser(user),
       accessToken,
       refreshToken,
@@ -86,7 +89,7 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException(
-        this.translate('auth.errors.invalidCredentials'),
+        translate(this.i18n, 'auth.errors.invalidCredentials'),
       );
     }
 
@@ -97,7 +100,7 @@ export class AuthService {
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(
-        this.translate('auth.errors.invalidCredentials'),
+        translate(this.i18n, 'auth.errors.invalidCredentials'),
       );
     }
 
@@ -109,7 +112,7 @@ export class AuthService {
     const refreshToken = await this.createRefreshTokenSession(user);
 
     return {
-      message: this.translate('auth.messages.loggedIn'),
+      message: translate(this.i18n, 'auth.messages.loggedIn'),
       user: UserResponseDto.createFromUser(user),
       accessToken,
       refreshToken,
@@ -131,7 +134,7 @@ export class AuthService {
 
       if (!session) {
         throw new UnauthorizedException(
-          this.translate('auth.errors.unauthorized'),
+          translate(this.i18n, 'auth.errors.unauthorized'),
         );
       }
 
@@ -151,7 +154,7 @@ export class AuthService {
     );
 
     return {
-      message: this.translate('auth.messages.tokenRefreshed'),
+      message: translate(this.i18n, 'auth.messages.tokenRefreshed'),
       accessToken,
       refreshToken,
     };
@@ -185,7 +188,7 @@ export class AuthService {
     }
 
     return {
-      message: this.translate('auth.messages.loggedOut'),
+      message: translate(this.i18n, 'auth.messages.loggedOut'),
     };
   }
 
@@ -263,7 +266,7 @@ export class AuthService {
       );
     } catch {
       throw new UnauthorizedException(
-        this.translate('auth.errors.unauthorized'),
+        translate(this.i18n, 'auth.errors.unauthorized'),
       );
     }
   }
@@ -288,9 +291,5 @@ export class AuthService {
     }
 
     return new Date(exp * 1000);
-  }
-
-  private translate(key: string): string {
-    return this.i18n.t(key, { lang: I18nContext.current()?.lang });
   }
 }

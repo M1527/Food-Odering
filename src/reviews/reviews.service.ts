@@ -5,9 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
 
+import { translate } from '../common/utils/i18n.util';
 import { OrderItem } from '../orders/entities/order-item.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
 import { PaymentStatus } from '../payments/entities/payment.entity';
@@ -60,7 +61,7 @@ export class ReviewsService {
 
         if (!product) {
           throw new NotFoundException(
-            this.translate('products.errors.notFound'),
+            translate(this.i18n, 'products.errors.notFound'),
           );
         }
 
@@ -73,7 +74,7 @@ export class ReviewsService {
 
         if (existingReview) {
           throw new ConflictException(
-            this.translate('reviews.errors.alreadyReviewed'),
+            translate(this.i18n, 'reviews.errors.alreadyReviewed'),
           );
         }
 
@@ -94,7 +95,7 @@ export class ReviewsService {
 
         if (!purchasedItem) {
           throw new ForbiddenException(
-            this.translate('reviews.errors.notPurchased'),
+            translate(this.i18n, 'reviews.errors.notPurchased'),
           );
         }
 
@@ -123,7 +124,7 @@ export class ReviewsService {
     } catch (error) {
       if (this.isDuplicateEntryError(error)) {
         throw new ConflictException(
-          this.translate('reviews.errors.alreadyReviewed'),
+          translate(this.i18n, 'reviews.errors.alreadyReviewed'),
         );
       }
 
@@ -131,7 +132,7 @@ export class ReviewsService {
     }
 
     return {
-      message: this.translate('reviews.messages.created'),
+      message: translate(this.i18n, 'reviews.messages.created'),
       review: ReviewResponseDto.createFromReview(reviewWithUser),
     };
   }
@@ -144,7 +145,9 @@ export class ReviewsService {
     });
 
     if (!productExists) {
-      throw new NotFoundException(this.translate('products.errors.notFound'));
+      throw new NotFoundException(
+        translate(this.i18n, 'products.errors.notFound'),
+      );
     }
 
     const page = query.page ?? 1;
@@ -166,7 +169,7 @@ export class ReviewsService {
     });
 
     return {
-      message: this.translate('reviews.messages.found'),
+      message: translate(this.i18n, 'reviews.messages.found'),
       reviews: reviews.map((review) =>
         ReviewResponseDto.createFromReview(review),
       ),
@@ -206,12 +209,6 @@ export class ReviewsService {
     }
 
     return result;
-  }
-
-  private translate(key: string): string {
-    return this.i18n.t(key, {
-      lang: I18nContext.current()?.lang,
-    });
   }
 
   private isDuplicateEntryError(error: unknown): boolean {

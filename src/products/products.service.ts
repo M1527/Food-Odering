@@ -1,12 +1,13 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { unlink } from 'fs/promises';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 
 import { AttachmentResponseDto } from '../attachments/dto/attachment-response.dto';
 import { AttachmentsService } from '../attachments/attachments.service';
 import { CategoriesService } from '../categories/categories.service';
+import { translate } from '../common/utils/i18n.util';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
 import { ProductSort, QueryProductsDto } from './dto/query-products.dto';
@@ -49,7 +50,7 @@ export class ProductsService {
     }
 
     return {
-      message: this.translate('products.messages.created'),
+      message: translate(this.i18n, 'products.messages.created'),
       product: ProductResponseDto.createFromProduct(
         result.product,
         result.attachments,
@@ -183,7 +184,7 @@ export class ProductsService {
     ]);
 
     return {
-      message: this.translate('products.messages.found'),
+      message: translate(this.i18n, 'products.messages.found'),
       products: products.map((product) =>
         ProductResponseDto.createFromProduct(
           product,
@@ -223,7 +224,7 @@ export class ProductsService {
     ]);
 
     return {
-      message: this.translate('products.messages.foundFeatured'),
+      message: translate(this.i18n, 'products.messages.foundFeatured'),
       products: products.map((product) =>
         ProductResponseDto.createFromProduct(
           product,
@@ -247,7 +248,7 @@ export class ProductsService {
     ]);
 
     return {
-      message: this.translate('products.messages.foundOne'),
+      message: translate(this.i18n, 'products.messages.foundOne'),
       product: ProductResponseDto.createFromProduct(
         product,
         images,
@@ -340,7 +341,7 @@ export class ProductsService {
     ]);
 
     return {
-      message: this.translate('products.messages.updated'),
+      message: translate(this.i18n, 'products.messages.updated'),
       product: ProductResponseDto.createFromProduct(
         result.product,
         result.attachments,
@@ -360,7 +361,7 @@ export class ProductsService {
     });
 
     return {
-      message: this.translate('products.messages.deleted'),
+      message: translate(this.i18n, 'products.messages.deleted'),
     };
   }
 
@@ -378,7 +379,9 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(this.translate('products.errors.notFound'));
+      throw new NotFoundException(
+        translate(this.i18n, 'products.errors.notFound'),
+      );
     }
 
     return product;
@@ -427,9 +430,5 @@ export class ProductsService {
 
   private getRepository(manager?: EntityManager): Repository<Product> {
     return manager?.getRepository(Product) ?? this.productsRepository;
-  }
-
-  private translate(key: string): string {
-    return this.i18n.t(key, { lang: I18nContext.current()?.lang });
   }
 }
