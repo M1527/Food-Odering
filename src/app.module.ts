@@ -26,6 +26,8 @@ import { PaymentsModule } from './payments/payments.module';
 import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
 import { Payment } from './payments/entities/payment.entity';
+import { ReviewsModule } from './reviews/reviews.module';
+import { Review } from './reviews/entities/review.entity';
 
 
 @Module({
@@ -52,7 +54,7 @@ import { Payment } from './payments/entities/payment.entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Profile, UserSession, Category, Product, Attachment, Order, OrderItem, Payment],
+        entities: [User, Profile, UserSession, Category, Product, Attachment, Order, OrderItem, Payment, Review],
         synchronize: false,
       })
     }),
@@ -83,6 +85,8 @@ import { Payment } from './payments/entities/payment.entity';
     OrdersModule,
 
     PaymentsModule,
+
+    ReviewsModule,
   ],
 })
 export class AppModule {}

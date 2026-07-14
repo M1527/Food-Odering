@@ -1,11 +1,9 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
 import { EntityManager, Repository } from 'typeorm';
 
+import { translate } from '../common/utils/i18n.util';
 import { Category } from './entities/category.entity';
 
 @Injectable()
@@ -29,7 +27,7 @@ export class CategoriesService {
 
     if (!category) {
       throw new NotFoundException(
-        this.translate('categories.errors.notFound'),
+        translate(this.i18n, 'categories.errors.notFound'),
       );
     }
 
@@ -38,9 +36,5 @@ export class CategoriesService {
 
   private getRepository(manager?: EntityManager): Repository<Category> {
     return manager?.getRepository(Category) ?? this.categoriesRepository;
-  }
-
-  private translate(key: string): string {
-    return this.i18n.t(key, { lang: I18nContext.current()?.lang });
   }
 }

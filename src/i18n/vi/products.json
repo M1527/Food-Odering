@@ -2,7 +2,10 @@
   "messages": {
     "created": "Tạo sản phẩm thành công",
     "updated": "Cập nhật sản phẩm thành công",
-    "deleted": "Xóa sản phẩm thành công"
+    "deleted": "Xóa sản phẩm thành công",
+    "found": "Lấy danh sách sản phẩm thành công",
+    "foundFeatured": "Lấy danh sách sản phẩm nổi bật thành công",
+    "foundOne": "Lấy chi tiết sản phẩm thành công"
   },
   "errors": {
     "notFound": "Không tìm thấy sản phẩm"

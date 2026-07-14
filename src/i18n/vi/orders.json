@@ -1,7 +1,8 @@
 {
   "messages": {
     "created": "Tạo đơn hàng thành công",
-    "canceled": "Hủy đơn hàng thành công"
+    "canceled": "Hủy đơn hàng thành công",
+    "statusUpdated": "Cập nhật trạng thái đơn hàng thành công"
   },
   "errors": {
     "notFound": "Không tìm thấy đơn hàng",
@@ -11,6 +12,10 @@
     "exceedStock": "Số lượng sản phẩm vượt quá tồn kho",
     "cannotCancel": "Chỉ có thể hủy đơn hàng đang chờ xử lý",
     "cannotCancelPaid": "Không thể hủy đơn hàng đã thanh toán",
-    "forbidden": "Bạn không có quyền thao tác đơn hàng này"
+    "forbidden": "Bạn không có quyền thao tác đơn hàng này",
+    "invalidStatusTransition": "Không thể chuyển sang trạng thái đơn hàng này",
+    "paymentRequired": "Đơn hàng phải có thông tin thanh toán trước khi xử lý",
+    "paymentNotCompleted": "Thanh toán của đơn hàng chưa hoàn tất",
+    "statusUpdateFailed": "Cập nhật trạng thái đơn hàng thất bại"
   }
 }

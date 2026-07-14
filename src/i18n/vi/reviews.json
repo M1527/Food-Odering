@@ -1,0 +1,10 @@
+{
+  "messages": {
+    "created": "Đánh giá sản phẩm thành công",
+    "found": "Lấy đánh giá thành công"
+  },
+  "errors": {
+    "alreadyReviewed": "Bạn đã đánh giá sản phẩm này",
+    "notPurchased": "Bạn chỉ có thể đánh giá sản phẩm trong đơn hàng đã hoàn tất thanh toán và giao hàng"
+  }
+}

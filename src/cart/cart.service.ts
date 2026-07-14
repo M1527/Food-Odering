@@ -3,8 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
 
+import { translate } from '../common/utils/i18n.util';
 import { ProductsService } from '../products/products.service';
 import { ProductStatus } from '../products/entities/product.entity';
 import { RedisService } from '../redis/redis.service';
@@ -32,32 +33,32 @@ export class CartService {
     let total = 0;
 
     for (const cartItem of cartItems) {
-        const product = await this.productsService.getProductOrThrow(
+      const product = await this.productsService.getProductOrThrow(
         cartItem.productId,
-        );
+      );
 
-        const price = Number(product.price);
-        const subtotal = price * cartItem.quantity;
+      const price = Number(product.price);
+      const subtotal = price * cartItem.quantity;
 
-        total += subtotal;
+      total += subtotal;
 
-        responseItems.push({
+      responseItems.push({
         product: {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            stock: product.stock,
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          stock: product.stock,
         },
         quantity: cartItem.quantity,
         subtotal: subtotal.toFixed(2),
-        });
+      });
     }
 
     return {
-        items: responseItems,
-        total: total.toFixed(2),
+      items: responseItems,
+      total: total.toFixed(2),
     };
-    }
+  }
 
   async addItem(userId: number, addCartItemDto: AddCartItemDto) {
     const product = await this.productsService.getProductOrThrow(
@@ -89,7 +90,7 @@ export class CartService {
     await this.saveCartItems(userId, cartItems);
 
     return {
-      message: this.translate('cart.messages.itemAdded'),
+      message: translate(this.i18n, 'cart.messages.itemAdded'),
       cart: await this.getCart(userId),
     };
   }
@@ -105,13 +106,11 @@ export class CartService {
     this.validateQuantity(updateCartItemDto.quantity, product.stock);
 
     const cartItems = await this.getCartItems(userId);
-    const existingItem = cartItems.find(
-      (item) => item.productId === productId,
-    );
+    const existingItem = cartItems.find((item) => item.productId === productId);
 
     if (!existingItem) {
       throw new NotFoundException(
-        this.translate('cart.errors.itemNotFound'),
+        translate(this.i18n, 'cart.errors.itemNotFound'),
       );
     }
 
@@ -120,7 +119,7 @@ export class CartService {
     await this.saveCartItems(userId, cartItems);
 
     return {
-      message: this.translate('cart.messages.itemUpdated'),
+      message: translate(this.i18n, 'cart.messages.itemUpdated'),
       cart: await this.getCart(userId),
     };
   }
@@ -133,21 +132,21 @@ export class CartService {
 
     if (nextCartItems.length === cartItems.length) {
       throw new NotFoundException(
-        this.translate('cart.errors.itemNotFound'),
+        translate(this.i18n, 'cart.errors.itemNotFound'),
       );
     }
 
     await this.saveCartItems(userId, nextCartItems);
 
     return {
-      message: this.translate('cart.messages.itemRemoved'),
+      message: translate(this.i18n, 'cart.messages.itemRemoved'),
       cart: await this.getCart(userId),
     };
   }
 
   async clearCart(userId: number): Promise<void> {
     await this.redisService.del(this.getCartKey(userId));
-}
+  }
 
   private async getCartItems(userId: number): Promise<RedisCartItem[]> {
     const rawCart = await this.redisService.get(this.getCartKey(userId));
@@ -184,13 +183,13 @@ export class CartService {
   ): void {
     if (status !== ProductStatus.Active) {
       throw new BadRequestException(
-        this.translate('cart.errors.productInactive'),
+        translate(this.i18n, 'cart.errors.productInactive'),
       );
     }
 
     if (stock <= 0) {
       throw new BadRequestException(
-        this.translate('cart.errors.outOfStock'),
+        translate(this.i18n, 'cart.errors.outOfStock'),
       );
     }
   }
@@ -198,12 +197,8 @@ export class CartService {
   private validateQuantity(quantity: number, stock: number): void {
     if (quantity > stock) {
       throw new BadRequestException(
-        this.translate('cart.errors.exceedStock'),
+        translate(this.i18n, 'cart.errors.exceedStock'),
       );
     }
-  }
-
-  private translate(key: string): string {
-    return this.i18n.t(key, { lang: I18nContext.current()?.lang });
   }
 }

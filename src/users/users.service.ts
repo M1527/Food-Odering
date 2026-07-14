@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
 import { Repository } from 'typeorm';
 
+import { translate } from '../common/utils/i18n.util';
 import { UserResponseDto } from './dto/user-response.dto';
 import { User } from './entities/user.entity';
 
@@ -23,7 +24,9 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException(this.translate('users.errors.notFound'));
+      throw new NotFoundException(
+        translate(this.i18n, 'users.errors.notFound'),
+      );
     }
 
     return user;
@@ -47,9 +50,5 @@ export class UsersService {
     const createdUser = this.usersRepository.create(user);
 
     return this.usersRepository.save(createdUser);
-  }
-
-  private translate(key: string): string {
-    return this.i18n.t(key, { lang: I18nContext.current()?.lang });
   }
 }

@@ -1,26 +1,33 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { unlink } from 'fs/promises';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 
 import { AttachmentResponseDto } from '../attachments/dto/attachment-response.dto';
 import { AttachmentsService } from '../attachments/attachments.service';
 import { CategoriesService } from '../categories/categories.service';
+import { translate } from '../common/utils/i18n.util';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
 import { ProductSort, QueryProductsDto } from './dto/query-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product, ProductStatus } from './entities/product.entity';
+import { ReviewsService } from '../reviews/reviews.service';
+import { OrderItem } from '../orders/entities/order-item.entity';
+import { OrderStatus } from '../orders/entities/order.entity';
+import { PaymentStatus } from '../payments/entities/payment.entity';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
   constructor(
+    @InjectRepository(OrderItem)
+    private readonly orderItemsRepository: Repository<OrderItem>,
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
-
+    private readonly reviewsService: ReviewsService,
     private readonly categoriesService: CategoriesService,
     private readonly attachmentsService: AttachmentsService,
     private readonly dataSource: DataSource,
@@ -43,7 +50,7 @@ export class ProductsService {
     }
 
     return {
-      message: this.translate('products.messages.created'),
+      message: translate(this.i18n, 'products.messages.created'),
       product: ProductResponseDto.createFromProduct(
         result.product,
         result.attachments,
@@ -169,16 +176,23 @@ export class ProductsService {
       .take(limit)
       .getManyAndCount();
 
-    const attachmentMap =
-      await this.attachmentsService.findProductAttachmentsByProductIds(
-        products.map((product) => product.id),
-      );
+    const productIds = products.map((product) => product.id);
+
+    const [attachmentMap, reviewStatsMap] = await Promise.all([
+      this.attachmentsService.findProductAttachmentsByProductIds(productIds),
+      this.reviewsService.getStatsByProductIds(productIds),
+    ]);
 
     return {
+      message: translate(this.i18n, 'products.messages.found'),
       products: products.map((product) =>
         ProductResponseDto.createFromProduct(
           product,
           attachmentMap.get(product.id) ?? [],
+          reviewStatsMap.get(product.id) ?? {
+            ratingAverage: 0,
+            reviewsCount: 0,
+          },
         ),
       ),
       total,
@@ -201,30 +215,48 @@ export class ProductsService {
       },
     });
 
-    const attachmentMap =
-      await this.attachmentsService.findProductAttachmentsByProductIds(
-        products.map((product) => product.id),
-      );
+    const productIds = products.map((product) => product.id);
+
+    const [attachmentMap, reviewStatsMap, soldCountMap] = await Promise.all([
+      this.attachmentsService.findProductAttachmentsByProductIds(productIds),
+      this.reviewsService.getStatsByProductIds(productIds),
+      this.getSoldCountByProductIds(productIds),
+    ]);
 
     return {
+      message: translate(this.i18n, 'products.messages.foundFeatured'),
       products: products.map((product) =>
         ProductResponseDto.createFromProduct(
           product,
           attachmentMap.get(product.id) ?? [],
+          reviewStatsMap.get(product.id) ?? {
+            ratingAverage: 0,
+            reviewsCount: 0,
+          },
+          soldCountMap.get(product.id) ?? 0,
         ),
       ),
-      total: products.length,
     };
   }
 
   async findOne(id: number) {
     const product = await this.getProductOrThrow(id);
-    const attachments = await this.attachmentsService.findProductAttachments(
-      product.id,
-    );
+
+    const [images, reviewStatsMap] = await Promise.all([
+      this.attachmentsService.findProductAttachments(product.id),
+      this.reviewsService.getStatsByProductIds([product.id]),
+    ]);
 
     return {
-      product: ProductResponseDto.createFromProduct(product, attachments),
+      message: translate(this.i18n, 'products.messages.foundOne'),
+      product: ProductResponseDto.createFromProduct(
+        product,
+        images,
+        reviewStatsMap.get(product.id) ?? {
+          ratingAverage: 0,
+          reviewsCount: 0,
+        },
+      ),
     };
   }
 
@@ -304,11 +336,19 @@ export class ProductsService {
       throw error;
     }
 
+    const reviewStatsMap = await this.reviewsService.getStatsByProductIds([
+      result.product.id,
+    ]);
+
     return {
-      message: this.translate('products.messages.updated'),
+      message: translate(this.i18n, 'products.messages.updated'),
       product: ProductResponseDto.createFromProduct(
         result.product,
         result.attachments,
+        reviewStatsMap.get(result.product.id) ?? {
+          ratingAverage: 0,
+          reviewsCount: 0,
+        },
       ),
     };
   }
@@ -321,7 +361,7 @@ export class ProductsService {
     });
 
     return {
-      message: this.translate('products.messages.deleted'),
+      message: translate(this.i18n, 'products.messages.deleted'),
     };
   }
 
@@ -339,17 +379,56 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(this.translate('products.errors.notFound'));
+      throw new NotFoundException(
+        translate(this.i18n, 'products.errors.notFound'),
+      );
     }
 
     return product;
   }
 
-  private getRepository(manager?: EntityManager): Repository<Product> {
-    return manager?.getRepository(Product) ?? this.productsRepository;
+  private async getSoldCountByProductIds(
+    productIds: number[],
+  ): Promise<Map<number, number>> {
+    if (productIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.orderItemsRepository
+      .createQueryBuilder('orderItem')
+      .innerJoin('orderItem.order', 'customerOrder')
+      .innerJoin('customerOrder.payment', 'payment')
+      .select('orderItem.productId', 'productId')
+      .addSelect('SUM(orderItem.quantity)', 'soldCount')
+      .where('orderItem.productId IN (:...productIds)', {
+        productIds,
+      })
+      .andWhere(
+        `(
+          customerOrder.status = :doneStatus
+          AND payment.status = :paidStatus
+        )`,
+        {
+          doneStatus: OrderStatus.Done,
+          paidStatus: PaymentStatus.Paid,
+        },
+      )
+      .groupBy('orderItem.productId')
+      .getRawMany<{
+        productId: string;
+        soldCount: string;
+      }>();
+
+    const soldCountMap = new Map<number, number>();
+
+    for (const row of rows) {
+      soldCountMap.set(Number(row.productId), Number(row.soldCount));
+    }
+
+    return soldCountMap;
   }
 
-  private translate(key: string): string {
-    return this.i18n.t(key, { lang: I18nContext.current()?.lang });
+  private getRepository(manager?: EntityManager): Repository<Product> {
+    return manager?.getRepository(Product) ?? this.productsRepository;
   }
 }

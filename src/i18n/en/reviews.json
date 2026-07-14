@@ -1,0 +1,10 @@
+{
+  "messages": {
+    "created": "Product reviewed successfully",
+    "found": "Reviews fetched successfully"
+  },
+  "errors": {
+    "alreadyReviewed": "You have already reviewed this product",
+    "notPurchased": "You can only review products from paid and completed orders"
+  }
+}

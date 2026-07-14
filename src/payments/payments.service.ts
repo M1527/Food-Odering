@@ -4,9 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { I18nContext, I18nService } from 'nestjs-i18n';
+import { I18nService } from 'nestjs-i18n';
 import { DataSource } from 'typeorm';
 
+import { translate } from '../common/utils/i18n.util';
 import { Order, OrderStatus } from '../orders/entities/order.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentResponseDto } from './dto/payment-response.dto';
@@ -45,24 +46,26 @@ export class PaymentsService {
       });
 
       if (!order) {
-        throw new NotFoundException(this.translate('orders.errors.notFound'));
+        throw new NotFoundException(
+          translate(this.i18n, 'orders.errors.notFound'),
+        );
       }
 
       if (order.userId !== userId) {
         throw new ForbiddenException(
-          this.translate('payments.errors.forbidden'),
+          translate(this.i18n, 'payments.errors.forbidden'),
         );
       }
 
       if (order.status === OrderStatus.Canceled) {
         throw new BadRequestException(
-          this.translate('payments.errors.orderCanceled'),
+          translate(this.i18n, 'payments.errors.orderCanceled'),
         );
       }
 
       if (order.payment) {
         throw new BadRequestException(
-          this.translate('payments.errors.alreadyPaid'),
+          translate(this.i18n, 'payments.errors.alreadyPaid'),
         );
       }
 
@@ -84,12 +87,8 @@ export class PaymentsService {
     });
 
     return {
-      message: this.translate('payments.messages.created'),
+      message: translate(this.i18n, 'payments.messages.created'),
       payment: PaymentResponseDto.createFromPayment(savedPayment),
     };
-  }
-
-  private translate(key: string): string {
-    return this.i18n.t(key, { lang: I18nContext.current()?.lang });
   }
 }
