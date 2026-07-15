@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from './redis/redis.module';
 import * as path from 'path';
 
@@ -31,7 +32,9 @@ import { Review } from './reviews/entities/review.entity';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Notification } from './notifications/entities/notification.entity';
 import { NotificationsModule } from './notifications/notifications.module';
-
+import { DailyReportsModule } from './daily-reports/daily-reports.module';
+import { MailModule } from './mail/mail.module';
+import { DailyReport } from './daily-reports/entities/daily-report.entity';
 
 @Module({
   imports: [
@@ -57,9 +60,22 @@ import { NotificationsModule } from './notifications/notifications.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Profile, UserSession, Category, Product, Attachment, Order, OrderItem, Payment, Review, Notification],
+        entities: [
+          User,
+          Profile,
+          UserSession,
+          Category,
+          Product,
+          Attachment,
+          Order,
+          OrderItem,
+          Payment,
+          Review,
+          Notification,
+          DailyReport,
+        ],
         synchronize: false,
-      })
+      }),
     }),
 
     ServeStaticModule.forRoot({
@@ -68,6 +84,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     }),
 
     EventEmitterModule.forRoot(),
+
+    ScheduleModule.forRoot(),
 
     UsersModule,
 
@@ -94,6 +112,10 @@ import { NotificationsModule } from './notifications/notifications.module';
     ReviewsModule,
 
     NotificationsModule,
+
+    DailyReportsModule,
+
+    MailModule,
   ],
 })
 export class AppModule {}

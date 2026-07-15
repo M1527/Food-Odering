@@ -13,6 +13,7 @@ import { Order } from '../orders/entities/order.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { Review } from '../reviews/entities/review.entity';
 import { Notification } from '../notifications/entities/notification.entity';
+import { DailyReport } from '../daily-reports/entities/daily-report.entity';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -22,17 +23,18 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   entities: [
-  User,
-  Profile,
-  UserSession,
-  Category,
-  Product,
-  Attachment,
-  Order,
-  OrderItem,
-  Payment,
-  Review,
-  Notification,
+    User,
+    Profile,
+    UserSession,
+    Category,
+    Product,
+    Attachment,
+    Order,
+    OrderItem,
+    Payment,
+    Review,
+    Notification,
+    DailyReport,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,
