@@ -138,7 +138,42 @@ describe('DailyReportsService', () => {
         sentAt: expect.any(Date) as Date,
       }),
     );
+    expect(dailyReportsRepository.save).toHaveBeenCalledTimes(1);
   });
+
+  it('does not store the report when sending the email fails', async () => {
+    mockReportQueries();
+    dailyReportsRepository.findOne.mockResolvedValue(null);
+    dailyReportsRepository.create.mockReturnValue({});
+    mailService.sendDailyReport.mockRejectedValue(
+      new Error('SMTP unavailable'),
+    );
+
+    await expect(service.sendDailyReport('2026-07-14')).rejects.toThrow(
+      'SMTP unavailable',
+    );
+    expect(dailyReportsRepository.save).not.toHaveBeenCalled();
+  });
+
+  function mockReportQueries(): void {
+    const totalOrdersQuery = createQueryBuilderMock();
+    const statusQuery = createQueryBuilderMock();
+    const revenueQuery = createQueryBuilderMock();
+    const productsQuery = createQueryBuilderMock();
+    const usersQuery = createQueryBuilderMock();
+
+    totalOrdersQuery.getCount.mockResolvedValue(0);
+    statusQuery.getRawMany.mockResolvedValue([]);
+    revenueQuery.getRawOne.mockResolvedValue({ total: '0' });
+    productsQuery.getRawMany.mockResolvedValue([]);
+    usersQuery.getCount.mockResolvedValue(0);
+    ordersRepository.createQueryBuilder
+      .mockReturnValueOnce(totalOrdersQuery)
+      .mockReturnValueOnce(statusQuery);
+    paymentsRepository.createQueryBuilder.mockReturnValue(revenueQuery);
+    orderItemsRepository.createQueryBuilder.mockReturnValue(productsQuery);
+    usersRepository.createQueryBuilder.mockReturnValue(usersQuery);
+  }
 });
 
 function createQueryBuilderMock() {

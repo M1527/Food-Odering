@@ -66,14 +66,21 @@ export class DailyReportsService {
       totalRevenue: report.totalRevenue.toFixed(2),
       newUsers: report.newUsers,
       sentToEmail: recipient,
-      sentAt: null,
     });
-    await this.dailyReportsRepository.save(dailyReport);
 
-    await this.mailService.sendDailyReport(recipient, report);
+    try {
+      await this.mailService.sendDailyReport(recipient, report);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Failed to send daily report ${reportDate}: ${message}`,
+      );
+      throw error;
+    }
 
     dailyReport.sentAt = new Date();
     await this.dailyReportsRepository.save(dailyReport);
+
     this.logger.log(`Daily report ${reportDate} sent to ${recipient}`);
 
     return { sent: true, reportDate };
