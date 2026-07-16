@@ -7,6 +7,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { I18nService } from 'nestjs-i18n';
@@ -15,11 +16,18 @@ import { DataSource, Repository } from 'typeorm';
 import { CartService } from '../cart/cart.service';
 import { translate } from '../common/utils/i18n.util';
 import {
+  ORDER_STATUS_CHANGED_EVENT,
+  OrderStatusChangedEvent,
+} from '../notifications/events/order-status-changed.event';
+import {
   Payment,
   PaymentMethod,
   PaymentStatus,
 } from '../payments/entities/payment.entity';
-import { Product, ProductStatus } from '../products/entities/product.entity';
+import {
+  Product,
+  ProductStatus,
+} from '../products/entities/product.entity';
 import { RedisService } from '../redis/redis.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
@@ -35,6 +43,7 @@ export class OrdersService {
     @InjectRepository(Order)
     private readonly ordersRepository: Repository<Order>,
 
+    private readonly eventEmitter: EventEmitter2,
     private readonly cartService: CartService,
     private readonly redisService: RedisService,
     private readonly dataSource: DataSource,
@@ -44,15 +53,20 @@ export class OrdersService {
   async create(userId: number, createOrderDto: CreateOrderDto) {
     const checkoutLockKey = this.getCheckoutLockKey(userId);
     const checkoutLockToken = randomUUID();
-    const checkoutLockAcquired = await this.redisService.setIfNotExists(
-      checkoutLockKey,
-      checkoutLockToken,
-      this.checkoutLockTtlSeconds,
-    );
+
+    const checkoutLockAcquired =
+      await this.redisService.setIfNotExists(
+        checkoutLockKey,
+        checkoutLockToken,
+        this.checkoutLockTtlSeconds,
+      );
 
     if (!checkoutLockAcquired) {
       throw new BadRequestException(
-        translate(this.i18n, 'orders.errors.checkoutInProgress'),
+        translate(
+          this.i18n,
+          'orders.errors.checkoutInProgress',
+        ),
       );
     }
 
@@ -65,105 +79,129 @@ export class OrdersService {
         );
       }
 
-      const order = await this.dataSource.transaction(async (manager) => {
-        const orderRepository = manager.getRepository(Order);
-        const orderItemRepository = manager.getRepository(OrderItem);
-        const productRepository = manager.getRepository(Product);
+      const order = await this.dataSource.transaction(
+        async (manager) => {
+          const orderRepository = manager.getRepository(Order);
+          const orderItemRepository =
+            manager.getRepository(OrderItem);
+          const productRepository =
+            manager.getRepository(Product);
 
-        const orderedCartItems = [...cart.items].sort(
-          (firstItem, secondItem) =>
-            firstItem.product.id - secondItem.product.id,
-        );
-        const orderItems: OrderItem[] = [];
-        let total = 0;
+          const orderedCartItems = [...cart.items].sort(
+            (firstItem, secondItem) =>
+              firstItem.product.id - secondItem.product.id,
+          );
 
-        for (const cartItem of orderedCartItems) {
-          const product = await productRepository.findOne({
+          const orderItems: OrderItem[] = [];
+          let total = 0;
+
+          for (const cartItem of orderedCartItems) {
+            const product = await productRepository.findOne({
+              where: {
+                id: cartItem.product.id,
+              },
+              lock: {
+                mode: 'pessimistic_write',
+              },
+            });
+
+            if (!product) {
+              throw new NotFoundException(
+                translate(
+                  this.i18n,
+                  'products.errors.notFound',
+                ),
+              );
+            }
+
+            if (product.status !== ProductStatus.Active) {
+              throw new BadRequestException(
+                translate(
+                  this.i18n,
+                  'orders.errors.productInactive',
+                ),
+              );
+            }
+
+            if (product.stock < cartItem.quantity) {
+              throw new BadRequestException(
+                translate(
+                  this.i18n,
+                  'orders.errors.exceedStock',
+                ),
+              );
+            }
+
+            const subtotal =
+              Number(product.price) * cartItem.quantity;
+
+            total += subtotal;
+            product.stock -= cartItem.quantity;
+
+            await productRepository.save(product);
+
+            const orderItem = orderItemRepository.create({
+              productId: product.id,
+              productName: product.name,
+              unitPrice: product.price,
+              quantity: cartItem.quantity,
+              subtotal: subtotal.toFixed(2),
+            });
+
+            orderItems.push(orderItem);
+          }
+
+          const createdOrder = orderRepository.create({
+            userId,
+            orderCode: this.generateOrderCode(),
+            status: OrderStatus.Pending,
+            totalAmount: total.toFixed(2),
+            shippingAddress: createOrderDto.shippingAddress,
+            note: createOrderDto.note,
+          });
+
+          const savedOrder =
+            await orderRepository.save(createdOrder);
+
+          orderItems.forEach((orderItem) => {
+            orderItem.orderId = savedOrder.id;
+          });
+
+          await orderItemRepository.save(orderItems);
+
+          return orderRepository.findOneOrFail({
             where: {
-              id: cartItem.product.id,
+              id: savedOrder.id,
             },
-            lock: {
-              mode: 'pessimistic_write',
+            relations: {
+              items: true,
+              payment: true,
             },
           });
-
-          if (!product) {
-            throw new NotFoundException(
-              translate(this.i18n, 'products.errors.notFound'),
-            );
-          }
-
-          if (product.status !== ProductStatus.Active) {
-            throw new BadRequestException(
-              translate(this.i18n, 'orders.errors.productInactive'),
-            );
-          }
-
-          if (product.stock < cartItem.quantity) {
-            throw new BadRequestException(
-              translate(this.i18n, 'orders.errors.exceedStock'),
-            );
-          }
-
-          const subtotal = Number(product.price) * cartItem.quantity;
-
-          total += subtotal;
-          product.stock -= cartItem.quantity;
-
-          await productRepository.save(product);
-
-          const orderItem = orderItemRepository.create({
-            productId: product.id,
-            productName: product.name,
-            unitPrice: product.price,
-            quantity: cartItem.quantity,
-            subtotal: subtotal.toFixed(2),
-          });
-
-          orderItems.push(orderItem);
-        }
-
-        const createdOrder = orderRepository.create({
-          userId,
-          orderCode: this.generateOrderCode(),
-          status: OrderStatus.Pending,
-          totalAmount: total.toFixed(2),
-          shippingAddress: createOrderDto.shippingAddress,
-          note: createOrderDto.note,
-        });
-
-        const savedOrder = await orderRepository.save(createdOrder);
-
-        orderItems.forEach((orderItem) => {
-          orderItem.orderId = savedOrder.id;
-        });
-
-        await orderItemRepository.save(orderItems);
-
-        return orderRepository.findOneOrFail({
-          where: {
-            id: savedOrder.id,
-          },
-          relations: {
-            items: true,
-            payment: true,
-          },
-        });
-      });
+        },
+      );
 
       await this.cartService.clearCart(userId);
 
       return {
-        message: translate(this.i18n, 'orders.messages.created'),
+        message: translate(
+          this.i18n,
+          'orders.messages.created',
+        ),
         order: OrderResponseDto.createFromOrder(order),
       };
     } finally {
       try {
-        await this.redisService.delIfValue(checkoutLockKey, checkoutLockToken);
+        await this.redisService.delIfValue(
+          checkoutLockKey,
+          checkoutLockToken,
+        );
       } catch (error) {
         this.logger.warn(
           `Failed to release checkout lock ${checkoutLockKey}: ${
-            error instanceof Error ? error.message : String(error)
+            error instanceof Error
+              ? error.message
+              : String(error)
           }`,
         );
       }
@@ -185,7 +223,9 @@ export class OrdersService {
     });
 
     return {
-      orders: orders.map((order) => OrderResponseDto.createFromOrder(order)),
+      orders: orders.map((order) =>
+        OrderResponseDto.createFromOrder(order),
+      ),
       total: orders.length,
     };
   }
@@ -202,104 +242,21 @@ export class OrdersService {
     });
 
     return {
-      orders: orders.map((order) => OrderResponseDto.createFromOrder(order)),
+      orders: orders.map((order) =>
+        OrderResponseDto.createFromOrder(order),
+      ),
       total: orders.length,
     };
   }
 
   async cancel(userId: number, orderId: number) {
-    const updatedOrder = await this.dataSource.transaction(async (manager) => {
-      const orderRepository = manager.getRepository(Order);
-      const productRepository = manager.getRepository(Product);
-      const paymentRepository = manager.getRepository(Payment);
-
-      const order = await orderRepository.findOne({
-        where: {
-          id: orderId,
-        },
-        relations: {
-          items: true,
-          payment: true,
-        },
-        lock: {
-          mode: 'pessimistic_write',
-        },
-      });
-
-      if (!order) {
-        throw new NotFoundException(
-          translate(this.i18n, 'orders.errors.notFound'),
-        );
-      }
-
-      if (order.userId !== userId) {
-        throw new ForbiddenException(
-          translate(this.i18n, 'orders.errors.forbidden'),
-        );
-      }
-
-      if (order.status !== OrderStatus.Pending) {
-        throw new BadRequestException(
-          translate(this.i18n, 'orders.errors.cannotCancel'),
-        );
-      }
-
-      if (order.payment?.status === PaymentStatus.Paid) {
-        throw new BadRequestException(
-          translate(this.i18n, 'orders.errors.cannotCancelPaid'),
-        );
-      }
-
-      const orderedItems = [...order.items].sort(
-        (firstItem, secondItem) => firstItem.productId - secondItem.productId,
-      );
-
-      for (const item of orderedItems) {
-        const product = await productRepository.findOne({
-          where: {
-            id: item.productId,
-          },
-          withDeleted: true,
-          lock: {
-            mode: 'pessimistic_write',
-          },
-        });
-
-        if (!product) {
-          throw new NotFoundException(
-            translate(this.i18n, 'products.errors.notFound'),
-          );
-        }
-
-        product.stock += item.quantity;
-
-        await productRepository.save(product);
-      }
-
-      if (order.payment?.status === PaymentStatus.Pending) {
-        order.payment.status = PaymentStatus.Failed;
-
-        await paymentRepository.save(order.payment);
-      }
-
-      order.status = OrderStatus.Canceled;
-
-      return orderRepository.save(order);
-    });
-
-    return {
-      message: translate(this.i18n, 'orders.messages.canceled'),
-      order: OrderResponseDto.createFromOrder(updatedOrder),
-    };
-  }
-
-  async updateStatus(orderId: number, nextStatus: OrderStatus) {
-    let updatedOrder: Order;
-
-    try {
-      updatedOrder = await this.dataSource.transaction(async (manager) => {
+    const updatedOrder = await this.dataSource.transaction(
+      async (manager) => {
         const orderRepository = manager.getRepository(Order);
-        const paymentRepository = manager.getRepository(Payment);
+        const productRepository =
+          manager.getRepository(Product);
+        const paymentRepository =
+          manager.getRepository(Payment);
 
         const order = await orderRepository.findOne({
           where: {
@@ -320,48 +277,179 @@ export class OrdersService {
           );
         }
 
-        const allowedNextStatus: Partial<Record<OrderStatus, OrderStatus>> = {
-          [OrderStatus.Pending]: OrderStatus.Confirmed,
-          [OrderStatus.Confirmed]: OrderStatus.Shipping,
-          [OrderStatus.Shipping]: OrderStatus.Done,
-        };
-
-        if (allowedNextStatus[order.status] !== nextStatus) {
-          throw new BadRequestException(
-            translate(this.i18n, 'orders.errors.invalidStatusTransition'),
+        if (order.userId !== userId) {
+          throw new ForbiddenException(
+            translate(this.i18n, 'orders.errors.forbidden'),
           );
         }
 
-        if (!order.payment) {
+        if (order.status !== OrderStatus.Pending) {
           throw new BadRequestException(
-            translate(this.i18n, 'orders.errors.paymentRequired'),
+            translate(
+              this.i18n,
+              'orders.errors.cannotCancel',
+            ),
           );
         }
 
-        if (
-          order.payment.status === PaymentStatus.Failed ||
-          order.payment.status === PaymentStatus.Refunded ||
-          (order.payment.method === PaymentMethod.Bank &&
-            order.payment.status !== PaymentStatus.Paid)
-        ) {
+        if (order.payment?.status === PaymentStatus.Paid) {
           throw new BadRequestException(
-            translate(this.i18n, 'orders.errors.paymentNotCompleted'),
+            translate(
+              this.i18n,
+              'orders.errors.cannotCancelPaid',
+            ),
           );
         }
 
-        if (
-          nextStatus === OrderStatus.Done &&
-          order.payment.status === PaymentStatus.Pending
-        ) {
-          order.payment.status = PaymentStatus.Paid;
-          order.payment.paidAt = new Date();
+        const orderedItems = [...order.items].sort(
+          (firstItem, secondItem) =>
+            firstItem.productId - secondItem.productId,
+        );
+
+        for (const item of orderedItems) {
+          const product = await productRepository.findOne({
+            where: {
+              id: item.productId,
+            },
+            withDeleted: true,
+            lock: {
+              mode: 'pessimistic_write',
+            },
+          });
+
+          if (!product) {
+            throw new NotFoundException(
+              translate(
+                this.i18n,
+                'products.errors.notFound',
+              ),
+            );
+          }
+
+          product.stock += item.quantity;
+
+          await productRepository.save(product);
+        }
+
+        if (order.payment?.status === PaymentStatus.Pending) {
+          order.payment.status = PaymentStatus.Failed;
+
           await paymentRepository.save(order.payment);
         }
 
-        order.status = nextStatus;
+        order.status = OrderStatus.Canceled;
 
         return orderRepository.save(order);
-      });
+      },
+    );
+
+    await this.emitOrderStatusChanged(updatedOrder);
+
+    return {
+      message: translate(
+        this.i18n,
+        'orders.messages.canceled',
+      ),
+      order: OrderResponseDto.createFromOrder(updatedOrder),
+    };
+  }
+
+  async updateStatus(
+    orderId: number,
+    nextStatus: OrderStatus,
+  ) {
+    let updatedOrder: Order;
+
+    try {
+      updatedOrder = await this.dataSource.transaction(
+        async (manager) => {
+          const orderRepository =
+            manager.getRepository(Order);
+          const paymentRepository =
+            manager.getRepository(Payment);
+
+          const order = await orderRepository.findOne({
+            where: {
+              id: orderId,
+            },
+            relations: {
+              items: true,
+              payment: true,
+            },
+            lock: {
+              mode: 'pessimistic_write',
+            },
+          });
+
+          if (!order) {
+            throw new NotFoundException(
+              translate(
+                this.i18n,
+                'orders.errors.notFound',
+              ),
+            );
+          }
+
+          const allowedNextStatus: Partial<
+            Record<OrderStatus, OrderStatus>
+          > = {
+            [OrderStatus.Pending]:
+              OrderStatus.Confirmed,
+            [OrderStatus.Confirmed]:
+              OrderStatus.Shipping,
+            [OrderStatus.Shipping]: OrderStatus.Done,
+          };
+
+          if (
+            allowedNextStatus[order.status] !== nextStatus
+          ) {
+            throw new BadRequestException(
+              translate(
+                this.i18n,
+                'orders.errors.invalidStatusTransition',
+              ),
+            );
+          }
+
+          if (!order.payment) {
+            throw new BadRequestException(
+              translate(
+                this.i18n,
+                'orders.errors.paymentRequired',
+              ),
+            );
+          }
+
+          if (
+            order.payment.status === PaymentStatus.Failed ||
+            order.payment.status ===
+              PaymentStatus.Refunded ||
+            (order.payment.method === PaymentMethod.Bank &&
+              order.payment.status !== PaymentStatus.Paid)
+          ) {
+            throw new BadRequestException(
+              translate(
+                this.i18n,
+                'orders.errors.paymentNotCompleted',
+              ),
+            );
+          }
+
+          if (
+            nextStatus === OrderStatus.Done &&
+            order.payment.status === PaymentStatus.Pending
+          ) {
+            order.payment.status = PaymentStatus.Paid;
+            order.payment.paidAt = new Date();
+
+            await paymentRepository.save(order.payment);
+          }
+
+          order.status = nextStatus;
+
+          return orderRepository.save(order);
+        },
+      );
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -369,16 +457,25 @@ export class OrdersService {
 
       this.logger.error(
         `Failed to update order ${orderId} status to ${nextStatus}`,
-        error instanceof Error ? error.stack : String(error),
+        error instanceof Error
+          ? error.stack
+          : String(error),
       );
 
       throw new InternalServerErrorException(
-        translate(this.i18n, 'orders.errors.statusUpdateFailed'),
+        translate(
+          this.i18n,
+          'orders.errors.statusUpdateFailed',
+        ),
       );
     }
+    await this.emitOrderStatusChanged(updatedOrder);
 
     return {
-      message: translate(this.i18n, 'orders.messages.statusUpdated'),
+      message: translate(
+        this.i18n,
+        'orders.messages.statusUpdated',
+      ),
       order: OrderResponseDto.createFromOrder(updatedOrder),
     };
   }
@@ -401,6 +498,18 @@ export class OrdersService {
     }
 
     return order;
+  }
+
+  private async emitOrderStatusChanged(order: Order): Promise<void> {
+    await this.eventEmitter.emitAsync(
+      ORDER_STATUS_CHANGED_EVENT,
+      new OrderStatusChangedEvent(
+        order.userId,
+        order.id,
+        order.orderCode,
+        order.status,
+      ),
+    );
   }
 
   private generateOrderCode(): string {

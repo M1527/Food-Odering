@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from './redis/redis.module';
 import * as path from 'path';
 
@@ -28,7 +29,12 @@ import { OrderItem } from './orders/entities/order-item.entity';
 import { Payment } from './payments/entities/payment.entity';
 import { ReviewsModule } from './reviews/reviews.module';
 import { Review } from './reviews/entities/review.entity';
-
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { Notification } from './notifications/entities/notification.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+import { DailyReportsModule } from './daily-reports/daily-reports.module';
+import { MailModule } from './mail/mail.module';
+import { DailyReport } from './daily-reports/entities/daily-report.entity';
 
 @Module({
   imports: [
@@ -54,15 +60,32 @@ import { Review } from './reviews/entities/review.entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Profile, UserSession, Category, Product, Attachment, Order, OrderItem, Payment, Review],
+        entities: [
+          User,
+          Profile,
+          UserSession,
+          Category,
+          Product,
+          Attachment,
+          Order,
+          OrderItem,
+          Payment,
+          Review,
+          Notification,
+          DailyReport,
+        ],
         synchronize: false,
-      })
+      }),
     }),
 
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
+
+    EventEmitterModule.forRoot(),
+
+    ScheduleModule.forRoot(),
 
     UsersModule,
 
@@ -87,6 +110,12 @@ import { Review } from './reviews/entities/review.entity';
     PaymentsModule,
 
     ReviewsModule,
+
+    NotificationsModule,
+
+    DailyReportsModule,
+
+    MailModule,
   ],
 })
 export class AppModule {}

@@ -1,0 +1,27 @@
+{
+  "messages": {
+    "sent": "Gửi thông báo thành công"
+  },
+  "orderStatus": {
+    "PENDING": {
+      "title": "Đơn hàng đang chờ xử lý",
+      "content": "Đơn hàng #{orderCode} của bạn đang chờ xử lý"
+    },
+    "CONFIRMED": {
+      "title": "Đơn hàng đã được xác nhận",
+      "content": "Đơn hàng #{orderCode} của bạn đã được xác nhận"
+    },
+    "SHIPPING": {
+      "title": "Đơn hàng đang được giao",
+      "content": "Đơn hàng #{orderCode} của bạn đang được giao"
+    },
+    "DONE": {
+      "title": "Đơn hàng đã hoàn thành",
+      "content": "Đơn hàng #{orderCode} của bạn đã hoàn thành"
+    },
+    "CANCELED": {
+      "title": "Đơn hàng đã bị hủy",
+      "content": "Đơn hàng #{orderCode} của bạn đã bị hủy"
+    }
+  }
+}
