@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { QueryOrdersDto } from './dto/query-orders.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrdersService } from './orders.service';
 
@@ -43,8 +45,11 @@ export class OrdersController {
   }
 
   @Get('orders/my')
-  findMyOrders(@Req() request: AuthenticatedRequest) {
-    return this.ordersService.findMyOrders(request.user.userId);
+  findMyOrders(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: QueryOrdersDto,
+  ) {
+    return this.ordersService.findMyOrders(request.user.userId, query);
   }
 
   @Patch('orders/:id/cancel')
@@ -58,8 +63,8 @@ export class OrdersController {
   @Get('admin/orders')
   @UseGuards(RolesGuard)
   @Roles(UserRole.Admin)
-  findAdminOrders() {
-    return this.ordersService.findAdminOrders();
+  findAdminOrders(@Query() query: QueryOrdersDto) {
+    return this.ordersService.findAdminOrders(query);
   }
 
   @Patch('admin/orders/:id/status')
