@@ -36,3 +36,150 @@ nav a.active {
   color: #ea580c;
   font-weight: 600;
 }
+
+button {
+  cursor: pointer;
+  padding: 8px 14px;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.page-heading h1 {
+  margin-bottom: 8px;
+}
+
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.category-filter button {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  color: #475569;
+  background: #ffffff;
+}
+
+.category-filter button.active {
+  border-color: #ea580c;
+  color: #ffffff;
+  background: #ea580c;
+}
+
+.product-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.product-section-heading span {
+  color: #64748b;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  padding: 0;
+  list-style: none;
+  transition: opacity 150ms ease;
+}
+
+.product-grid.is-fetching {
+  opacity: 0.55;
+}
+
+.product-card {
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 6%);
+}
+
+.product-image {
+  display: block;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.product-image-placeholder {
+  display: grid;
+  place-items: center;
+  color: #64748b;
+}
+
+.product-card-content {
+  padding: 16px;
+}
+
+.product-card-content h3 {
+  margin: 4px 0 8px;
+}
+
+.product-category,
+.product-rating {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.product-category {
+  margin: 0;
+}
+
+.product-description {
+  display: -webkit-box;
+  min-height: 42px;
+  overflow: hidden;
+  color: #475569;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.product-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.product-card-footer strong {
+  color: #ea580c;
+}
+
+.product-card-footer span {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-block: 32px;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.error-state {
+  padding: 16px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #991b1b;
+  background: #fef2f2;
+}
