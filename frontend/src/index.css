@@ -1,0 +1,38 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: Arial, sans-serif;
+  color: #1f2937;
+  background: #f8fafc;
+}
+
+body {
+  margin: 0;
+}
+
+header,
+main {
+  width: min(1200px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+header {
+  padding-block: 24px;
+}
+
+nav {
+  display: flex;
+  gap: 16px;
+}
+
+nav a {
+  color: #475569;
+  text-decoration: none;
+}
+
+nav a.active {
+  color: #ea580c;
+  font-weight: 600;
+}
