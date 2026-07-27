@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { PaymentResponseDto } from '../../payments/dto/payment-response.dto';
+import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { OrderItem } from '../entities/order-item.entity';
 import { Order, OrderStatus } from '../entities/order.entity';
 
@@ -65,6 +66,9 @@ export class OrderResponseDto {
   @ApiPropertyOptional({ type: PaymentResponseDto })
   payment?: PaymentResponseDto;
 
+  @ApiPropertyOptional({ type: UserResponseDto })
+  user?: UserResponseDto;
+
   @ApiProperty({ example: '2026-07-09T09:00:00.000Z' })
   createdAt!: Date;
 
@@ -85,6 +89,9 @@ export class OrderResponseDto {
     );
     dto.payment = order.payment
       ? PaymentResponseDto.createFromPayment(order.payment)
+      : undefined;
+    dto.user = order.user
+      ? UserResponseDto.createFromUser(order.user)
       : undefined;
     dto.createdAt = order.createdAt;
     dto.updatedAt = order.updatedAt;

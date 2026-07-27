@@ -31,6 +31,7 @@ import {
 import { RedisService } from '../redis/redis.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
+import { QueryOrdersDto } from './dto/query-orders.dto';
 import { OrderItem } from './entities/order-item.entity';
 import { Order, OrderStatus } from './entities/order.entity';
 
@@ -208,44 +209,68 @@ export class OrdersService {
     }
   }
 
-  async findMyOrders(userId: number) {
-    const orders = await this.ordersRepository.find({
-      where: {
-        userId,
-      },
-      relations: {
-        items: true,
-        payment: true,
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
+  async findMyOrders(
+    userId: number,
+    query: QueryOrdersDto,
+  ) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const [orders, total] =
+      await this.ordersRepository.findAndCount({
+        where: {
+          userId,
+          ...(query.status ? { status: query.status } : {}),
+        },
+        relations: {
+          items: true,
+          payment: true,
+        },
+        order: {
+          createdAt: 'DESC',
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
 
     return {
       orders: orders.map((order) =>
         OrderResponseDto.createFromOrder(order),
       ),
-      total: orders.length,
+      total,
+      page,
+      limit,
     };
   }
 
-  async findAdminOrders() {
-    const orders = await this.ordersRepository.find({
-      relations: {
-        items: true,
-        payment: true,
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
+  async findAdminOrders(query: QueryOrdersDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const [orders, total] =
+      await this.ordersRepository.findAndCount({
+        where: query.status
+          ? {
+              status: query.status,
+            }
+          : {},
+        relations: {
+          items: true,
+          payment: true,
+          user: true,
+        },
+        order: {
+          createdAt: 'DESC',
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
 
     return {
       orders: orders.map((order) =>
         OrderResponseDto.createFromOrder(order),
       ),
-      total: orders.length,
+      total,
+      page,
+      limit,
     };
   }
 

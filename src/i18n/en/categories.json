@@ -1,6 +1,7 @@
 {
   "messages": {
     "created": "Category created successfully",
+    "found": "Categories retrieved successfully",
     "updated": "Category updated successfully"
   },
   "errors": {

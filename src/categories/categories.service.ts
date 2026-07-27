@@ -4,7 +4,8 @@ import { I18nService } from 'nestjs-i18n';
 import { EntityManager, Repository } from 'typeorm';
 
 import { translate } from '../common/utils/i18n.util';
-import { Category } from './entities/category.entity';
+import { CategoryResponseDto } from './dto/category-response.dto';
+import { Category, CategoryStatus } from './entities/category.entity';
 
 @Injectable()
 export class CategoriesService {
@@ -14,6 +15,24 @@ export class CategoriesService {
 
     private readonly i18n: I18nService,
   ) {}
+
+  async findAll() {
+    const categories = await this.categoriesRepository.find({
+      where: {
+        status: CategoryStatus.Active,
+      },
+      order: {
+        name: 'ASC',
+      },
+    });
+
+    return {
+      message: translate(this.i18n, 'categories.messages.found'),
+      categories: categories.map((category) =>
+        CategoryResponseDto.createFromCategory(category),
+      ),
+    };
+  }
 
   async getCategoryOrThrow(
     id: number,
