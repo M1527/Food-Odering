@@ -1,5 +1,9 @@
 import { http } from '../../lib/http'
-import type { ProductsQuery, ProductsResponse } from './types'
+import type {
+  ProductResponse,
+  ProductsQuery,
+  ProductsResponse,
+} from './types'
 
 export async function getProducts(
   query: ProductsQuery,
@@ -10,6 +14,12 @@ export async function getProducts(
       status: 'ACTIVE',
     },
   })
+
+  return response.data
+}
+
+export async function getProduct(productId: number): Promise<ProductResponse> {
+  const response = await http.get<ProductResponse>(`/products/${productId}`)
 
   return response.data
 }

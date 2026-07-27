@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
-import { getProducts } from './api'
+import { getProduct, getProducts } from './api'
 import type { ProductsQuery } from './types'
 
 export function useProducts(query: ProductsQuery) {
@@ -8,5 +8,13 @@ export function useProducts(query: ProductsQuery) {
     queryKey: ['products', query],
     queryFn: () => getProducts(query),
     placeholderData: keepPreviousData,
+  })
+}
+
+export function useProduct(productId: number) {
+  return useQuery({
+    queryKey: ['products', 'detail', productId],
+    queryFn: () => getProduct(productId),
+    enabled: Number.isInteger(productId) && productId > 0,
   })
 }

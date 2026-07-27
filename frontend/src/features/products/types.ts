@@ -42,3 +42,8 @@ export type ProductsResponse = {
   page: number
   limit: number
 }
+
+export type ProductResponse = {
+  message: string
+  product: Product
+}
