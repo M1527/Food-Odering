@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router'
 
+import { ProductGallery } from '../features/products/ProductGallery'
 import { useProduct } from '../features/products/queries'
 import { ProductReviews } from '../features/reviews/ProductReviews'
 import { formatCurrency } from '../lib/format'
@@ -44,22 +45,10 @@ export function ProductDetailPage() {
       </Link>
 
       <div className="product-detail">
-        <div className="product-gallery">
-          {product.attachments.length > 0 ? (
-            product.attachments.map((attachment, index) => (
-              <img
-                className={index === 0 ? 'product-detail-image primary' : 'product-detail-image'}
-                key={attachment.id}
-                src={attachment.url}
-                alt={`${product.name} - ảnh ${index + 1}`}
-              />
-            ))
-          ) : (
-            <div className="product-detail-image primary product-image-placeholder">
-              Chưa có ảnh
-            </div>
-          )}
-        </div>
+        <ProductGallery
+          productName={product.name}
+          attachments={product.attachments}
+        />
 
         <div className="product-detail-content">
           <p className="product-category">{product.category.name}</p>
