@@ -24,6 +24,15 @@ header {
 
 nav {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.nav-primary,
+.nav-auth {
+  display: flex;
+  align-items: center;
   gap: 16px;
 }
 
@@ -326,12 +335,139 @@ button {
   background: #fef2f2;
 }
 
+.auth-page {
+  display: grid;
+  min-height: calc(100vh - 120px);
+  place-items: start center;
+  padding-block: 40px;
+}
+
+.auth-card {
+  display: grid;
+  width: min(100%, 440px);
+  gap: 20px;
+  padding: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 8%);
+}
+
+.auth-card h1 {
+  margin: 0 0 8px;
+}
+
+.auth-card label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #1f2937;
+  font: inherit;
+  background: #ffffff;
+}
+
+.auth-card input:focus {
+  border-color: #ea580c;
+  outline: 3px solid #ffedd5;
+}
+
+.primary-button {
+  border: 1px solid #ea580c;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 600;
+  background: #ea580c;
+}
+
+.primary-button:disabled,
+.danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.field-error,
+.form-error {
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.form-error {
+  padding: 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+}
+
+.auth-switch {
+  margin: 0;
+  text-align: center;
+}
+
+.auth-switch a {
+  color: #ea580c;
+}
+
+.account-card {
+  display: grid;
+  max-width: 640px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.account-card div {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.account-card div:last-child {
+  border-bottom: 0;
+}
+
+.account-card dt {
+  color: #64748b;
+}
+
+.account-card dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.danger-button {
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #dc2626;
+}
+
 @media (max-width: 768px) {
+  nav {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .product-detail {
     grid-template-columns: 1fr;
   }
 
   .product-detail-image.primary {
     height: 300px;
+  }
+
+  .account-card div {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }
