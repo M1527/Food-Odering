@@ -261,6 +261,57 @@ button {
   border-top: 1px solid #e2e8f0;
 }
 
+.reviews-section {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.review-list {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  list-style: none;
+  transition: opacity 150ms ease;
+}
+
+.review-list.is-fetching {
+  opacity: 0.55;
+}
+
+.review-card {
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.review-card > p {
+  margin-bottom: 0;
+}
+
+.review-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.review-heading time {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.review-stars {
+  margin-top: 4px;
+  color: #f59e0b;
+  letter-spacing: 2px;
+}
+
+.review-stars span {
+  color: #cbd5e1;
+}
+
 .error-state a {
   display: inline-block;
   margin-left: 12px;

@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router'
 
 import { useProduct } from '../features/products/queries'
+import { ProductReviews } from '../features/reviews/ProductReviews'
 import { formatCurrency } from '../lib/format'
 
 export function ProductDetailPage() {
@@ -87,6 +88,8 @@ export function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      <ProductReviews key={product.id} productId={product.id} />
     </section>
   )
 }
