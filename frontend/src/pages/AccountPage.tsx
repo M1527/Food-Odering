@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 
 import { useAuth } from '../features/auth/useAuth'
 
@@ -50,6 +50,10 @@ export function AccountPage() {
           <dd>{user.role}</dd>
         </div>
       </dl>
+
+      <Link className="primary-link account-orders-link" to="/orders">
+        Xem đơn hàng của tôi
+      </Link>
 
       <button
         className="danger-button"

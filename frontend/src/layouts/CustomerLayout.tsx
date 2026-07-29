@@ -30,6 +30,7 @@ export function CustomerLayout() {
                     <span className="cart-badge">{cartCount}</span>
                   )}
                 </NavLink>
+                <NavLink to="/orders">Đơn hàng</NavLink>
                 <NavLink to="/account">{user.fullName}</NavLink>
               </>
             ) : (

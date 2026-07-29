@@ -142,6 +142,9 @@ export function CartPage() {
               <strong>{formatCurrency(cart.total)}</strong>
             </div>
             <p>Phí giao hàng sẽ được xác định ở bước đặt hàng.</p>
+            <Link className="primary-link cart-checkout-link" to="/checkout">
+              Tiến hành đặt hàng
+            </Link>
           </aside>
         </div>
       )}
