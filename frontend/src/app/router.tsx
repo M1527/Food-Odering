@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router'
 import { ProtectedRoute } from '../features/auth/ProtectedRoute'
 import { CustomerLayout } from '../layouts/CustomerLayout'
 import { AccountPage } from '../pages/AccountPage'
+import { CartPage } from '../pages/CartPage'
 import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { ProductDetailPage } from '../pages/ProductDetailPage'
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
           {
             path: 'account',
             element: <AccountPage />,
+          },
+          {
+            path: 'cart',
+            element: <CartPage />,
           },
         ],
       },

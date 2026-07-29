@@ -1,15 +1,52 @@
-import { Link, useParams } from 'react-router'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 
+import { useAuth } from '../features/auth/useAuth'
+import { useAddCartItem } from '../features/cart/queries'
 import { ProductGallery } from '../features/products/ProductGallery'
 import { useProduct } from '../features/products/queries'
 import { ProductReviews } from '../features/reviews/ProductReviews'
+import { getApiErrorMessage } from '../lib/api-error'
 import { formatCurrency } from '../lib/format'
 
 export function ProductDetailPage() {
   const { id } = useParams()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [quantity, setQuantity] = useState(1)
+  const [cartMessage, setCartMessage] = useState<string>()
+  const [cartError, setCartError] = useState<string>()
   const productId = Number(id)
   const isValidProductId = Number.isInteger(productId) && productId > 0
   const productQuery = useProduct(productId)
+  const addCartItem = useAddCartItem(user?.id ?? 0)
+
+  async function handleAddToCart() {
+    if (!user) {
+      navigate('/login', {
+        state: {
+          from: location.pathname,
+        },
+      })
+      return
+    }
+
+    setCartMessage(undefined)
+    setCartError(undefined)
+
+    try {
+      const response = await addCartItem.mutateAsync({
+        productId,
+        quantity,
+      })
+      setCartMessage(response.message)
+    } catch (error) {
+      setCartError(
+        getApiErrorMessage(error, 'Không thể thêm sản phẩm vào giỏ hàng.'),
+      )
+    }
+  }
 
   if (!isValidProductId) {
     return (
@@ -70,6 +107,52 @@ export function ProductDetailPage() {
               ? `Còn ${product.stock} sản phẩm`
               : 'Sản phẩm tạm hết hàng'}
           </p>
+
+          <div className="add-to-cart">
+            <div className="quantity-control" aria-label="Chọn số lượng">
+              <button
+                type="button"
+                aria-label="Giảm số lượng"
+                disabled={quantity === 1 || addCartItem.isPending}
+                onClick={() => setQuantity((current) => current - 1)}
+              >
+                −
+              </button>
+              <span>{quantity}</span>
+              <button
+                type="button"
+                aria-label="Tăng số lượng"
+                disabled={
+                  quantity >= product.stock ||
+                  product.stock === 0 ||
+                  addCartItem.isPending
+                }
+                onClick={() => setQuantity((current) => current + 1)}
+              >
+                +
+              </button>
+            </div>
+
+            <button
+              className="primary-button add-cart-button"
+              type="button"
+              disabled={product.stock === 0 || addCartItem.isPending}
+              onClick={() => void handleAddToCart()}
+            >
+              {addCartItem.isPending ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
+            </button>
+          </div>
+
+          {cartMessage && (
+            <p className="cart-success" role="status">
+              {cartMessage}
+            </p>
+          )}
+          {cartError && (
+            <p className="field-error" role="alert">
+              {cartError}
+            </p>
+          )}
 
           <div className="product-detail-description">
             <h2>Mô tả</h2>
