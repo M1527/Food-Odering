@@ -24,12 +24,15 @@ export type Product = {
   attachments: ProductAttachment[]
   ratingAverage: number
   reviewsCount: number
+  soldCount?: number
   createdAt: string
   updatedAt: string
 }
 
 export type ProductsQuery = {
+  q?: string
   categoryId?: number
+  status?: ProductStatus
   page?: number
   limit?: number
   sort?: ProductSort
@@ -46,4 +49,9 @@ export type ProductsResponse = {
 export type ProductResponse = {
   message: string
   product: Product
+}
+
+export type UpdateAdminProductInput = {
+  productId: number
+  formData: FormData
 }
