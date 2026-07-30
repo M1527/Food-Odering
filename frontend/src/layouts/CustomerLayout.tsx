@@ -1,9 +1,16 @@
 import { NavLink, Outlet } from 'react-router'
 
 import { useAuth } from '../features/auth/useAuth'
+import { useCart } from '../features/cart/queries'
 
 export function CustomerLayout() {
   const { user } = useAuth()
+  const cartQuery = useCart(user?.id)
+  const cartCount =
+    cartQuery.data?.items.reduce(
+      (total, item) => total + item.quantity,
+      0,
+    ) ?? 0
 
   return (
     <div>
@@ -16,7 +23,16 @@ export function CustomerLayout() {
 
           <div className="nav-auth">
             {user ? (
-              <NavLink to="/account">{user.fullName}</NavLink>
+              <>
+                <NavLink to="/cart">
+                  Giỏ hàng
+                  {cartCount > 0 && (
+                    <span className="cart-badge">{cartCount}</span>
+                  )}
+                </NavLink>
+                <NavLink to="/orders">Đơn hàng</NavLink>
+                <NavLink to="/account">{user.fullName}</NavLink>
+              </>
             ) : (
               <>
                 <NavLink to="/login">Đăng nhập</NavLink>
