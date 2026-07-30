@@ -22,3 +22,13 @@ export type ReviewsResponse = {
   reviews: Review[]
   total: number
 }
+
+export type CreateReviewInput = {
+  rating: number
+  comment: string
+}
+
+export type CreateReviewResponse = {
+  message: string
+  review: Review
+}

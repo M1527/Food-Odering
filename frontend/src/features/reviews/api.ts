@@ -1,5 +1,10 @@
 import { http } from '../../lib/http'
-import type { ReviewsQuery, ReviewsResponse } from './types'
+import type {
+  CreateReviewInput,
+  CreateReviewResponse,
+  ReviewsQuery,
+  ReviewsResponse,
+} from './types'
 
 export async function getProductReviews(
   productId: number,
@@ -10,6 +15,18 @@ export async function getProductReviews(
     {
       params: query,
     },
+  )
+
+  return response.data
+}
+
+export async function createProductReview(
+  productId: number,
+  input: CreateReviewInput,
+): Promise<CreateReviewResponse> {
+  const response = await http.post<CreateReviewResponse>(
+    `/products/${productId}/reviews`,
+    input,
   )
 
   return response.data

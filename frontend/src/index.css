@@ -445,6 +445,128 @@ button {
   margin-bottom: 0;
 }
 
+.review-form {
+  display: grid;
+  gap: 16px;
+  margin-block: 18px 28px;
+  padding: 22px;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+}
+
+.review-form h3,
+.review-form p {
+  margin: 0;
+}
+
+.review-form p {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.review-form > label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.review-form textarea {
+  resize: vertical;
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #1f2937;
+  font: inherit;
+  background: #ffffff;
+}
+
+.review-form textarea:focus {
+  border-color: #ea580c;
+  outline: 3px solid #ffedd5;
+}
+
+.rating-input {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rating-input legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.rating-input label {
+  position: relative;
+  cursor: pointer;
+}
+
+.rating-input input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.rating-input label > span[aria-hidden='true'] {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 24px;
+  background: #ffffff;
+}
+
+.rating-input label.active > span[aria-hidden='true'],
+.rating-input input:checked + span,
+.rating-input input:focus-visible + span {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  outline: 2px solid #fde68a;
+}
+
+.review-submit {
+  justify-self: start;
+}
+
+.review-form-note,
+.review-success {
+  margin-block: 18px 24px;
+  padding: 14px 16px;
+  border-radius: 8px;
+}
+
+.review-form-note {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.review-form-note a {
+  color: #ea580c;
+}
+
+.review-success {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 .review-heading {
   display: flex;
   align-items: flex-start;
@@ -1023,6 +1145,18 @@ button {
   display: flex;
   justify-content: space-between;
   gap: 16px;
+}
+
+.order-item-end {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-product-link {
+  color: #ea580c;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .order-details dl {

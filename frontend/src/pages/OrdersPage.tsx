@@ -165,7 +165,17 @@ export function OrdersPage() {
                           <span>
                             {item.productName} × {item.quantity}
                           </span>
-                          <strong>{formatCurrency(item.subtotal)}</strong>
+                          <span className="order-item-end">
+                            <strong>{formatCurrency(item.subtotal)}</strong>
+                            {order.status === 'DONE' && (
+                              <Link
+                                className="review-product-link"
+                                to={`/products/${item.productId}#reviews`}
+                              >
+                                Đánh giá
+                              </Link>
+                            )}
+                          </span>
                         </li>
                       ))}
                     </ul>
