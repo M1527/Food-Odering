@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { useAuth } from '../auth/useAuth'
 import { formatDate } from '../../lib/format'
+import { ProductReviewForm } from './ProductReviewForm'
 import { useProductReviews } from './queries'
 
 const REVIEWS_PER_PAGE = 5
@@ -10,6 +12,7 @@ type ProductReviewsProps = {
 }
 
 export function ProductReviews({ productId }: ProductReviewsProps) {
+  const { user } = useAuth()
   const [page, setPage] = useState(1)
   const reviewsQuery = useProductReviews(productId, {
     page,
@@ -19,13 +22,36 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
   const totalPages = reviewsQuery.data
     ? Math.max(1, Math.ceil(reviewsQuery.data.total / REVIEWS_PER_PAGE))
     : 1
+  const hasReviewed =
+    reviewsQuery.data?.reviews.some(
+      (review) => review.user.id === user?.id,
+    ) ?? false
+
+  useEffect(() => {
+    if (window.location.hash !== '#reviews') {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      document
+        .getElementById('reviews')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [])
 
   return (
-    <section className="reviews-section">
+    <section className="reviews-section" id="reviews">
       <div className="product-section-heading">
         <h2>Đánh giá sản phẩm</h2>
         {reviewsQuery.data && <span>{reviewsQuery.data.total} đánh giá</span>}
       </div>
+
+      <ProductReviewForm
+        productId={productId}
+        hasReviewed={hasReviewed}
+      />
 
       {reviewsQuery.isPending && <p>Đang tải đánh giá...</p>}
 

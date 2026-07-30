@@ -31,6 +31,9 @@ export function CustomerLayout() {
                   )}
                 </NavLink>
                 <NavLink to="/orders">Đơn hàng</NavLink>
+                {user.role === 'ADMIN' && (
+                  <NavLink to="/admin/orders">Quản trị</NavLink>
+                )}
                 <NavLink to="/account">{user.fullName}</NavLink>
               </>
             ) : (

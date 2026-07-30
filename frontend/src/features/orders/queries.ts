@@ -5,7 +5,12 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 
-import { cancelOrder, getMyOrders } from './api'
+import {
+  cancelOrder,
+  getAdminOrders,
+  getMyOrders,
+  updateAdminOrderStatus,
+} from './api'
 import type { OrdersQuery } from './types'
 
 export const myOrdersKey = (query?: OrdersQuery) =>
@@ -27,6 +32,29 @@ export function useCancelOrder() {
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ['orders', 'my'],
+      }),
+  })
+}
+
+export const adminOrdersKey = (query?: OrdersQuery) =>
+  ['orders', 'admin', query] as const
+
+export function useAdminOrders(query: OrdersQuery) {
+  return useQuery({
+    queryKey: adminOrdersKey(query),
+    queryFn: () => getAdminOrders(query),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useUpdateAdminOrderStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateAdminOrderStatus,
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ['orders', 'admin'],
       }),
   })
 }
