@@ -1185,6 +1185,133 @@ button {
   border-top: 1px solid #e2e8f0;
 }
 
+.admin-eyebrow {
+  margin: 0;
+  color: #ea580c;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-total {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.admin-order-list {
+  display: grid;
+  gap: 16px;
+  transition: opacity 150ms ease;
+}
+
+.admin-order-list.is-fetching {
+  opacity: 0.55;
+}
+
+.admin-order-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.admin-order-main {
+  min-width: 0;
+  padding: 20px;
+}
+
+.admin-order-identity {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-order-identity h2 {
+  margin: 0 0 5px;
+  font-size: 18px;
+}
+
+.admin-order-identity time {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.admin-order-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-block: 20px;
+}
+
+.admin-order-facts div {
+  min-width: 0;
+}
+
+.admin-order-facts dt {
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-order-facts dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-weight: 600;
+}
+
+.admin-order-details {
+  border-top: 1px solid #e2e8f0;
+}
+
+.admin-order-details summary {
+  padding-top: 14px;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-order-details ul {
+  display: grid;
+  gap: 8px;
+  padding: 14px 0 0;
+  list-style: none;
+}
+
+.admin-order-details li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-order-details p {
+  color: #475569;
+}
+
+.admin-order-action {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  border-left: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.admin-order-action > span,
+.admin-order-action small {
+  color: #64748b;
+}
+
+.admin-order-action .primary-button {
+  margin-top: 8px;
+}
+
 @media (max-width: 768px) {
   nav {
     align-items: flex-start;
@@ -1238,5 +1365,18 @@ button {
   .order-details dl div {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .admin-order-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-order-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-order-action {
+    border-top: 1px solid #e2e8f0;
+    border-left: 0;
   }
 }

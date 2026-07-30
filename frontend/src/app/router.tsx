@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router'
 
+import { AdminRoute } from '../features/auth/AdminRoute'
 import { ProtectedRoute } from '../features/auth/ProtectedRoute'
 import { CustomerLayout } from '../layouts/CustomerLayout'
 import { AccountPage } from '../pages/AccountPage'
@@ -60,6 +61,23 @@ export const router = createBrowserRouter([
           {
             path: 'checkout/result',
             element: <CheckoutResultPage />,
+          },
+          {
+            element: <AdminRoute />,
+            children: [
+              {
+                path: 'admin/orders',
+                lazy: async () => {
+                  const { AdminOrdersPage } = await import(
+                    '../pages/admin/AdminOrdersPage'
+                  )
+
+                  return {
+                    Component: AdminOrdersPage,
+                  }
+                },
+              },
+            ],
           },
         ],
       },

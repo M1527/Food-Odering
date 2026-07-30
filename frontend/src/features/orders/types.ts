@@ -1,4 +1,5 @@
 import type { Payment } from '../payments/types'
+import type { AuthUser } from '../auth/types'
 
 export type OrderStatus =
   | 'PENDING'
@@ -25,6 +26,7 @@ export type Order = {
   note?: string
   items: OrderItem[]
   payment?: Payment
+  user?: AuthUser
   createdAt: string
   updatedAt: string
 }
@@ -53,6 +55,16 @@ export type OrdersResponse = {
 }
 
 export type CancelOrderResponse = {
+  message: string
+  order: Order
+}
+
+export type UpdateOrderStatusInput = {
+  orderId: number
+  status: OrderStatus
+}
+
+export type UpdateOrderStatusResponse = {
   message: string
   order: Order
 }
